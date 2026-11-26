@@ -1,0 +1,1812 @@
+<script>
+    /**
+     * ============================================================================
+     * SAJAK (Sistem Rekapitulasi Pajak) - Modul Operator & Transaksi (js_operator.html)
+     * Berisi: Form Input Pajak, Jalur SIPLah/E-Katalog, Kode Objek Pajak Coretax,
+     * Kalkulator Pajak Otomatis (PMK 58/2022 & PMK 59/2022), Auto-Save Draft,
+     * Riwayat Pajak, Susul NTPN Massal, Import Cepat BKU ARKAS, Cetak BPP PDF,
+     * Unduh Excel Riwayat, dan Modal Detail Sekolah.
+     * ============================================================================
+     */
+
+    /* ===================== JALUR BELANJA & OBJEK PAJAK CORETAX ===================== */
+
+    /** Mengatur tampilan field Bagian D saat jalur belanja berubah (SIPLah/E-Katalog vs Non-SIPLah) */
+    function handleJalurBelanjaChange(val) {
+        var isSiplah = (val === 'SIPLAH');
+        var unit = isUnit();
+        var banner = $('siplahInfoBanner');
+        var titleEl = $('siplahInfoTitle');
+        var textEl = $('siplahInfoText');
+
+        if (banner) {
+            if (isSiplah) {
+                if (unit) {
+                    if (titleEl) titleEl.innerHTML = '<span>🛍️ Ketentuan Pengadaan E-Katalog / Toko Daring LKPP (PMK No. 58/PMK.03/2022):</span>';
+                    if (textEl) textEl.innerHTML = 'Pajak transaksi E-Katalog / Toko Daring LKPP bermitra otomatis dipungut dan disetor oleh Penyelenggara Perdagangan Melalui Sistem Elektronik (PPMSE). BPP Dinas/Cabdis <strong>tidak perlu membuat Kode Billing maupun menyetor NTPN mandiri</strong>. Cukup catat nomor pesanan / SP2D ke dalam BKU SIPD-RI.';
+                } else {
+                    if (titleEl) titleEl.innerHTML = '<span>🛍️ Ketentuan Pajak Belanja SIPLah (PMK No. 58/PMK.03/2022):</span>';
+                    if (textEl) textEl.innerHTML = 'Pajak (PPN &amp; PPh Pasal 22 0,5%) otomatis dipungut dan disetor oleh penyedia marketplace SIPLah sebagai pihak lain yang ditunjuk pemerintah. Bendahara sekolah <strong>tidak perlu membuat Kode Billing maupun menyetor NTPN mandiri</strong>. Cukup catat bukti pesanan/invoice ke dalam BKU ARKAS.';
+                }
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        var wrapInv = $('wrap_p_noInvoiceSiplah');
+        var wrapBilling = $('wrap_p_noBilling');
+        var wrapFaktur = $('wrap_p_noFaktur');
+        var wrapBupot = $('wrap_p_noBupot');
+        var wrapNtpn = $('wrap_p_ntpn');
+        var wrapTglBilling = $('wrap_p_tanggalBilling');
+        var wrapTglSetor = $('wrap_p_tanggalSetor');
+
+        var titleBagianD = $('titleBagianD');
+        var lblNoInv = $('lblNoInvoiceSiplah');
+        var descNoInv = $('descNoInvoiceSiplah');
+        var badgeTitle = $('badgeSiplahTitle');
+        var inpNoInv = $('p_noInvoiceSiplah');
+
+        var noBillingInput = $('p_noBilling');
+        var tglBillingInput = $('p_tanggalBilling');
+        var ntpnInput = $('p_ntpn');
+        var badgeBilling = $('p_noBilling_badge');
+        var badgeNtpn = $('p_ntpn_badge');
+
+        if (isSiplah) {
+            if (wrapInv) wrapInv.classList.remove('hidden');
+            if (wrapBilling) wrapBilling.classList.add('hidden');
+            if (wrapFaktur) wrapFaktur.classList.add('hidden');
+            if (wrapBupot) wrapBupot.classList.add('hidden');
+            if (wrapNtpn) wrapNtpn.classList.add('hidden');
+            if (wrapTglBilling) wrapTglBilling.classList.add('hidden');
+            if (wrapTglSetor) wrapTglSetor.classList.add('hidden');
+
+            if (titleBagianD) {
+                titleBagianD.textContent = unit
+                    ? 'Dokumen Pengadaan E-Katalog / Toko Daring LKPP (PMK No. 58/2022)'
+                    : 'Dokumen Transaksi Marketplace SIPLah (PMK No. 58/2022)';
+            }
+            if (badgeTitle) {
+                badgeTitle.innerHTML = unit
+                    ? '🛍️ Dokumen Transaksi E-Katalog LKPP (PMK No. 58/PMK.03/2022)'
+                    : '🛍️ Dokumen Transaksi Marketplace SIPLah (PMK No. 58/PMK.03/2022)';
+            }
+            if (lblNoInv) {
+                lblNoInv.textContent = unit
+                    ? 'Nomor Pesanan / Invoice E-Katalog *'
+                    : 'Nomor Invoice / Pemesanan SIPLah *';
+            }
+            if (descNoInv) {
+                descNoInv.innerHTML = unit
+                    ? 'Transaksi melalui E-Katalog LKPP <strong>tidak memerlukan Kode Billing, Faktur Pajak, Bukti Potong, maupun NTPN</strong> karena pajak otomatis dipungut oleh mitra PPMSE. Cukup cantumkan Nomor Pesanan / Invoice ini.'
+                    : 'Transaksi melalui marketplace SIPLah <strong>tidak memerlukan Kode Billing, Faktur Pajak, Bukti Potong, maupun NTPN</strong> karena seluruh pajak telah dipungut dan disetor langsung oleh mitra marketplace resmi Kemendikbudristek. Cukup cantumkan <strong>Nomor Invoice</strong> ini untuk pencatatan di BPP dan BKU ARKAS.';
+            }
+            if (inpNoInv) {
+                inpNoInv.placeholder = unit
+                    ? 'Contoh: ORD-LKPP-2026-98765 atau No. Pesanan'
+                    : 'Contoh: INV-2026/SIPLah/09876 atau No. Pesanan SIPLah';
+            }
+
+            if (noBillingInput) noBillingInput.removeAttribute('required');
+            if (tglBillingInput) tglBillingInput.removeAttribute('required');
+            if (badgeBilling) badgeBilling.style.display = 'none';
+            if (badgeNtpn) badgeNtpn.style.display = 'none';
+        } else {
+            if (wrapInv) wrapInv.classList.add('hidden');
+            if (wrapBilling) wrapBilling.classList.remove('hidden');
+            if (wrapFaktur) wrapFaktur.classList.remove('hidden');
+            if (wrapBupot) wrapBupot.classList.remove('hidden');
+            if (wrapNtpn) wrapNtpn.classList.remove('hidden');
+            if (wrapTglBilling) wrapTglBilling.classList.remove('hidden');
+            if (wrapTglSetor) wrapTglSetor.classList.remove('hidden');
+
+            if (titleBagianD) {
+                titleBagianD.textContent = 'Billing & Pembayaran Pajak (Terintegrasi Kode Objek Pajak Coretax)';
+            }
+            if (noBillingInput) {
+                noBillingInput.setAttribute('required', 'required');
+                noBillingInput.placeholder = 'Kode Billing 15 digit';
+            }
+            if (tglBillingInput) {
+                tglBillingInput.setAttribute('required', 'required');
+            }
+            if (ntpnInput) {
+                ntpnInput.placeholder = 'Bisa disusulkan lewat menu Riwayat';
+            }
+            if (badgeBilling) badgeBilling.style.display = 'block';
+            if (badgeNtpn) badgeNtpn.style.display = 'block';
+            updateDigitBadge('p_noBilling');
+            updateDigitBadge('p_ntpn');
+        }
+    }
+
+    /** Memicu hitung ulang otomatis saat kategori PPh 21 diubah */
+    function handleSubPph21Change() {
+        if (parseRupiah('p_nilaiBelanja') > 0) {
+            hitungPajakOtomatis();
+        }
+    }
+
+    /** Filter berjenjang Kode Objek Pajak Coretax (Kolom 13 -> Kolom 15) */
+    function handleBppJenisPajakChange(selectedBpp) {
+        renderObjekPajakDatalist(selectedBpp);
+        var wrapPph21 = $('wrapSubPph21');
+        if (wrapPph21) {
+            wrapPph21.classList.toggle('hidden', selectedBpp !== 'PPh Pasal 21');
+        }
+    }
+
+    function renderObjekPajakDatalist(filterBpp) {
+        var dList = $('datalistObjekPajak');
+        if (!dList) return;
+        dList.innerHTML = '';
+        var cat = String(filterBpp || '').trim();
+        var count = 0;
+
+        for (var i = 0; i < allObjekPajak.length; i++) {
+            var obj = allObjekPajak[i];
+            if (cat && obj.kategoriBpp && obj.kategoriBpp !== cat) continue;
+            var opt = document.createElement('option');
+            opt.value = obj.label;
+            opt.label = obj.jenis + (obj.sifat ? ' • ' + obj.sifat : '') + (obj.tarif ? ' • Tarif: ' + obj.tarif : '');
+            dList.appendChild(opt);
+            count++;
+        }
+
+        for (var j = 0; j < defaultRincianPajak.length; j++) {
+            var rText = defaultRincianPajak[j];
+            if (seenInDatalist_(rText)) continue;
+            var optDef = document.createElement('option');
+            optDef.value = rText;
+            dList.appendChild(optDef);
+            count++;
+        }
+
+        var hint = $('hintObjekPajak');
+        if (hint) {
+            hint.textContent = cat
+                ? 'Menampilkan ' + count + ' Kode & Rincian Objek Pajak Coretax untuk kategori ' + cat + '.'
+                : 'Menampilkan seluruh Kode & Rincian Objek Pajak Coretax (BPMP, BP21, BPPU, & Master Referensi).';
+        }
+    }
+
+    function seenInDatalist_(val) {
+        for (var i = 0; i < allObjekPajak.length; i++) {
+            if (allObjekPajak[i].label === val) return true;
+        }
+        return false;
+    }
+
+    /* ===================== FORM INPUT & EDIT TRANSAKSI PAJAK ===================== */
+
+    function formatRupiahInput(input) {
+        var val = String(input.value || '').replace(/[^0-9]/g, '');
+        input.value = val ? formatRibuan(val) : '';
+    }
+
+    function parseRupiah(id) {
+        var el = $(id);
+        return Number((el ? el.value : '').replace(/\./g, '') || 0);
+    }
+
+    function restoreRekapSubmitButton() {
+        var btn = $('btnSubmitRekap');
+        if (!btn) return;
+        btn.disabled = false;
+        if (editingRecordNo) {
+            btn.innerHTML = '<span>' + (adminEditing ? 'Simpan Koreksi Admin #' : 'Simpan Perubahan Data #') + escapeHtml(editingRecordNo) + '</span>';
+        } else {
+            btn.innerHTML = '<span>Simpan Data Rekap Pajak</span>';
+        }
+    }
+
+    function submitRekapPajak(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var isSiplah = ($('p_jalurBelanja') && $('p_jalurBelanja').value === 'SIPLAH');
+        var unit = isUnit();
+        var defaultPlatform = unit ? 'E-Katalog' : 'SIPLah';
+        var fieldsToValidate = ['p_npwpPerusahaan'];
+        var noInvoiceSiplah = '';
+
+        if (!isSiplah) {
+            fieldsToValidate.push('p_noBilling');
+            fieldsToValidate.push('p_ntpn');
+        } else {
+            noInvoiceSiplah = $('p_noInvoiceSiplah') ? String($('p_noInvoiceSiplah').value || '').trim() : '';
+            if (!noInvoiceSiplah) {
+                showToast('Mohon cantumkan Nomor Invoice / Pemesanan ' + (unit ? 'E-Katalog' : 'SIPLah') + ' terlebih dahulu.', 'warning');
+                if ($('p_noInvoiceSiplah')) $('p_noInvoiceSiplah').focus();
+                return;
+            }
+        }
+
+        var digitErr = validateDigitFields(fieldsToValidate);
+        if (digitErr) {
+            showToast(digitErr, 'warning');
+            return;
+        }
+
+        var linkBuktiVal = $('p_linkBukti') ? String($('p_linkBukti').value || '').trim() : '';
+        if (linkBuktiVal && !/^https?:\/\//i.test(linkBuktiVal)) {
+            showToast('Link Bukti Dokumen harus diawali http:// atau https://', 'warning');
+            if ($('p_linkBukti')) $('p_linkBukti').focus();
+            return;
+        }
+
+        var btn = $('btnSubmitRekap');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span><span> Menyimpan Data...</span>';
+
+        // Ekstrak seluruh nilai DOM menjadi tipe data primitif sebelum dikirim ke backend
+        var editRowIdx = String($('p_editRowIdx').value || '').trim();
+        var bppTgl = $('p_bppTanggal') ? String($('p_bppTanggal').value || '').trim() : '';
+        var formData = {
+            editRowIdx: editRowIdx ? Number(editRowIdx) : 0,
+            expectedRecordNo: editingRecordNo ? String(editingRecordNo) : '',
+            jalurBelanja: isSiplah ? 'SIPLAH' : 'NON_SIPLAH',
+            noArkas: $('p_noArkas') ? String($('p_noArkas').value || '').trim() : '',
+            noInvoiceSiplah: noInvoiceSiplah,
+            npsn: String($('p_npsn').value || '').trim(),
+            namaSekolah: String($('p_namaSekolah').value || '').trim(),
+            subUnitCoretax: String($('p_subUnitCoretax').value || '').trim(),
+            kabKota: String($('p_kabKota').value || '').trim(),
+            cabangDinas: String($('p_cabangDinas').value || '').trim(),
+            uraianKegiatan: String($('p_uraianKegiatan').value || '').trim(),
+            jenisPengadaan: String($('p_jenisPengadaan').value || '').trim(),
+            namaPerusahaan: String($('p_namaPerusahaan').value || '').trim(),
+            alamatPerusahaan: String($('p_alamatPerusahaan').value || '').trim(),
+            npwpPerusahaan: String($('p_npwpPerusahaan').value || '').trim(),
+            bppTanggal: bppTgl,
+            bppJenisPajak: String($('p_bppJenisPajak').value || '').trim(),
+            nilaiBelanja: parseRupiah('p_nilaiBelanja'),
+            nilaiPajakSetor: parseRupiah('p_nilaiPajakSetor'),
+            jenisPajakRincian: String($('p_jenisPajakRincian').value || '').trim(),
+            tanggalBilling: isSiplah ? bppTgl : String($('p_tanggalBilling').value || '').trim(),
+            noBilling: isSiplah ? (noInvoiceSiplah ? (defaultPlatform + ': ' + noInvoiceSiplah) : defaultPlatform) : String($('p_noBilling').value || '').trim(),
+            noFaktur: isSiplah ? '-' : String($('p_noFaktur').value || '').trim(),
+            noBupot: isSiplah ? '-' : String($('p_noBupot').value || '').trim(),
+            ntpn: isSiplah ? defaultPlatform.toUpperCase() : String($('p_ntpn').value || '').trim(),
+            tanggalSetor: isSiplah ? bppTgl : String($('p_tanggalSetor').value || '').trim(),
+            sumberDana: String($('p_sumberDana').value || '').trim(),
+            ket: String($('p_ket').value || '').trim(),
+            linkBukti: linkBuktiVal
+        };
+
+        callGasServer_('simpanDataRekap', [formData, String(sessionData.sessionToken)], function (res) {
+            if (!res || res.status !== 'success') {
+                restoreRekapSubmitButton();
+                showToast('Gagal menyimpan data: ' + (res && res.message ? res.message : 'Kesalahan tidak diketahui'), 'error');
+                return;
+            }
+
+            btn.disabled = false;
+            var wasAdmin = adminEditing;
+            cancelEditMode();
+            discardFormDraft();
+            historyCache = {};
+
+            if (res.updatedHistory) {
+                historyCache['1__'] = res.updatedHistory;
+                renderRiwayatTable(res.updatedHistory);
+            }
+
+            lastSavedReceipt = res.savedRecord;
+            var title = res.isEdit ? 'Data Pajak Berhasil Diperbarui!' : 'Data Pajak Berhasil Disimpan!';
+
+            if (wasAdmin) {
+                adminEditing = false;
+                if (typeof invalidateAdminTxCache === 'function') invalidateAdminTxCache();
+                $('operatorWorkspace').classList.add('hidden');
+                $('adminDashboard').classList.remove('hidden');
+                adminTxPage = 1;
+                if (typeof switchAdminTab === 'function') switchAdminTab('transactions');
+            }
+
+            showReceiptModal(title, res.savedRecord);
+        }, function (err) {
+            restoreRekapSubmitButton();
+            showToast('Terjadi kesalahan: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    /** Mengekstrak nomor invoice SIPLah/E-Katalog secara konsisten dari properti item */
+    function extractInvoiceSiplah_(item) {
+        if (!item) return '';
+        var invVal = item.noInvoiceSiplah || item.noInvoice || '';
+        if (!invVal && item.noBilling) {
+            invVal = String(item.noBilling).replace(/^(?:SIPLah|E-Katalog):\s*/i, '').trim();
+        }
+        if (invVal.toUpperCase() === 'SIPLAH' || invVal.toUpperCase() === 'E-KATALOG') invVal = '';
+        return invVal;
+    }
+
+    function fillRekapForm(item) {
+        $('p_editRowIdx').value = item.rowIdx || '';
+        if ($('p_jalurBelanja')) {
+            $('p_jalurBelanja').value = item.isSiplah ? 'SIPLAH' : 'NON_SIPLAH';
+            handleJalurBelanjaChange($('p_jalurBelanja').value);
+        }
+        if ($('p_noInvoiceSiplah')) {
+            $('p_noInvoiceSiplah').value = item.isSiplah ? extractInvoiceSiplah_(item) : '';
+        }
+        $('p_uraianKegiatan').value = item.uraianKegiatan || '';
+        setSelectValue('p_jenisPengadaan', item.jenisPengadaan);
+        $('p_namaPerusahaan').value = item.namaPerusahaan || '';
+        $('p_alamatPerusahaan').value = item.alamatPerusahaan || '';
+        $('p_npwpPerusahaan').value = item.npwpPerusahaan || '';
+        $('p_bppTanggal').value = item.bppTanggal || '';
+        setSelectValue('p_bppJenisPajak', item.bppJenisPajak);
+        handleBppJenisPajakChange(item.bppJenisPajak);
+        $('p_nilaiBelanja').value = formatRibuan(item.nilaiBelanja);
+        $('p_nilaiPajakSetor').value = formatRibuan(item.nilaiPajakSetor);
+        $('p_jenisPajakRincian').value = item.jenisPajakRincian || '';
+        $('p_tanggalBilling').value = item.tanggalBilling || '';
+        $('p_noBilling').value = item.noBilling || '';
+        $('p_noFaktur').value = item.noFaktur || '';
+        $('p_noBupot').value = item.noBupot || '';
+        $('p_ntpn').value = item.ntpn || '';
+        $('p_tanggalSetor').value = item.tanggalSetor || '';
+        setSelectValue('p_sumberDana', item.sumberDana);
+        $('p_ket').value = item.ket || '';
+        if ($('p_noArkas')) $('p_noArkas').value = item.noArkas || '';
+        if ($('p_linkBukti')) $('p_linkBukti').value = item.linkBukti || '';
+        refreshDigitBadges('p_');
+    }
+
+    function startEditRekap(idx) {
+        var item = window.currentRenderedItems && window.currentRenderedItems[idx];
+        if (!item) return;
+        editingRecordNo = item.no;
+        $('btnCancelEdit').onclick = cancelEditMode;
+        $('btnResetForm').classList.remove('hidden');
+        fillRekapForm(item);
+        $('editModeBanner').classList.remove('hidden');
+        $('editModeTitle').textContent = 'Mode Edit Transaksi Nomor Urut #' + item.no;
+        $('btnSubmitRekap').innerHTML = '<span>Simpan Perubahan Data #' + escapeHtml(item.no) + '</span>';
+        switchTab('formPajak');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEditMode() {
+        editingRecordNo = '';
+        if ($('btnCancelEdit')) $('btnCancelEdit').onclick = cancelEditMode;
+        if ($('btnResetForm')) $('btnResetForm').classList.remove('hidden');
+        if ($('p_editRowIdx')) $('p_editRowIdx').value = '';
+        if ($('editModeBanner')) $('editModeBanner').classList.add('hidden');
+        if ($('btnSubmitRekap')) $('btnSubmitRekap').innerHTML = '<span>Simpan Data Rekap Pajak</span>';
+        resetFormPajak();
+    }
+
+    function resetFormPajak() {
+        ['p_uraianKegiatan', 'p_namaPerusahaan', 'p_alamatPerusahaan', 'p_npwpPerusahaan', 'p_bppTanggal', 'p_nilaiBelanja',
+            'p_nilaiPajakSetor', 'p_jenisPajakRincian', 'p_tanggalBilling', 'p_noBilling', 'p_noFaktur', 'p_noBupot', 'p_ntpn', 'p_tanggalSetor', 'p_ket', 'p_linkBukti', 'p_noArkas', 'p_noInvoiceSiplah']
+            .forEach(function (id) { if ($(id)) $(id).value = ''; });
+        ['p_jenisPengadaan', 'p_bppJenisPajak', 'p_sumberDana'].forEach(function (id) { if ($(id)) $(id).selectedIndex = 0; });
+        if ($('p_jalurBelanja')) {
+            $('p_jalurBelanja').value = 'NON_SIPLAH';
+            handleJalurBelanjaChange('NON_SIPLAH');
+        }
+        var wrapPph21 = $('wrapSubPph21');
+        if (wrapPph21) wrapPph21.classList.add('hidden');
+        if ($('calcTaxBadge')) {
+            $('calcTaxBadge').textContent = '';
+            $('calcTaxBadge').classList.add('hidden');
+        }
+        renderObjekPajakDatalist('');
+        refreshDigitBadges('p_');
+    }
+
+    /* ===================== RIWAYAT PAJAK & BUKTI TRANSAKSI ===================== */
+
+    function debounceLoadRiwayat() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () { loadRiwayatServer(1, false); }, 350);
+    }
+
+    function changeRiwayatPage(delta) {
+        loadRiwayatServer(currentRiwayatPage + delta, false);
+    }
+
+    function loadRiwayatServer(page, forceRefresh) {
+        if (!sessionData || !sessionData.operator) return;
+        var q = String($('filterSearchRiwayat').value || '').trim();
+        var fPajak = String($('filterPajakRiwayat').value || '').trim();
+        var cacheKey = page + '_' + q + '_' + fPajak;
+        if (!forceRefresh && historyCache[cacheKey]) {
+            renderRiwayatTable(historyCache[cacheKey]);
+            return;
+        }
+
+        $('riwayatLoading').classList.remove('hidden');
+        callGasServer_('getRiwayatPajakByNpsn', [String(sessionData.operator.npsn), Number(page), 10, q, fPajak, String(sessionData.sessionToken)], function (res) {
+            $('riwayatLoading').classList.add('hidden');
+            if (!res || res.status === 'error') {
+                showToast(res && res.message ? res.message : 'Gagal memuat riwayat pajak.', 'error');
+                return;
+            }
+            historyCache[cacheKey] = res;
+            renderRiwayatTable(res);
+        }, function (err) {
+            $('riwayatLoading').classList.add('hidden');
+            showToast('Gagal memuat riwayat: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function renderRiwayatTable(res) {
+        currentRiwayatPage = res.currentPage || 1;
+        var sum = res.summary || { totalTransaksi: 0, totalBelanja: 0, totalPajakSetor: 0, lunasNtpn: 0, belumNtpn: 0 };
+        $('badgeTotalRiwayat').textContent = sum.totalTransaksi;
+        $('metricTotalTransaksi').textContent = sum.totalTransaksi + ' Data';
+        $('metricTotalBelanja').textContent = 'Rp ' + formatRibuan(sum.totalBelanja);
+        $('metricTotalPajak').textContent = 'Rp ' + formatRibuan(sum.totalPajakSetor);
+        $('metricLunasNtpn').textContent = sum.lunasNtpn + ' Lengkap';
+        $('metricBelumNtpn').textContent = sum.belumNtpn + ' Belum NTPN';
+
+        var tbody = $('tbodyRiwayat');
+        tbody.innerHTML = '';
+        if (!res.items || res.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="py-10 text-center text-slate-400 text-xs">Belum ada data transaksi pajak yang sesuai filter.</td></tr>';
+        } else {
+            for (var i = 0; i < res.items.length; i++) {
+                var item = res.items[i];
+                var ntpnBadge = '';
+                if (item.isSiplah) {
+                    ntpnBadge = isUnit()
+                        ? '<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md font-semibold text-[11px]">🛍️ E-Katalog (PPMSE)</span>'
+                        : '<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md font-semibold text-[11px]">🛍️ SIPLah (Marketplace)</span>';
+                } else if (item.ntpn) {
+                    ntpnBadge = '<span class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md font-semibold text-[11px]">NTPN: ' + escapeHtml(item.ntpn) + '</span>';
+                } else {
+                    ntpnBadge = '<span class="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md font-semibold text-[11px]">Belum Isi NTPN</span>';
+                }
+
+                var canBulkNtpn = !item.ntpn && !item.isSiplah;
+                var cbCls = 'riwayat-cb rounded text-emerald-600 ' + (canBulkNtpn ? 'cursor-pointer' : 'opacity-25 cursor-not-allowed');
+                var cbExtra = canBulkNtpn ? '' : ' disabled title="Sudah ber-NTPN / SIPLah"';
+                var rowIdxVal = item.rowIdx !== undefined ? item.rowIdx : (item.idx !== undefined ? item.idx : '');
+
+                var cbCell = '<td class="py-3.5 px-3 text-center">' +
+                    '<input type="checkbox" class="' + cbCls + '" data-no="' + escapeHtml(item.no) + '" data-rowidx="' + escapeHtml(rowIdxVal) + '" data-uraian="' + escapeHtml(item.uraianKegiatan) + '" data-pajak="' + Number(item.nilaiPajakSetor || 0) + '" data-billing="' + escapeHtml(item.noBilling || '') + '"' + cbExtra + ' onchange="onRiwayatCheckboxChange()">' +
+                    '</td>';
+
+                var billNtpnHtml = '';
+                if (item.isSiplah) {
+                    var invDisplay = extractInvoiceSiplah_(item);
+                    billNtpnHtml = '<div class="text-[11px] text-blue-800 mb-1 font-semibold">Invoice: <strong class="text-blue-900 font-mono">' + (invDisplay ? escapeHtml(invDisplay) : '-') + '</strong></div>' + ntpnBadge;
+                } else {
+                    billNtpnHtml = '<div class="text-[11px] text-slate-600 mb-1">Billing: <strong class="text-slate-800 font-mono">' + escapeHtml(item.noBilling || '-') + '</strong></div>' + ntpnBadge;
+                }
+
+                var tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-all';
+                tr.innerHTML =
+                    cbCell +
+                    '<td class="py-3.5 px-3 font-bold text-slate-900">#' + escapeHtml(item.no) + '</td>' +
+                    '<td class="py-3.5 px-3"><div class="font-semibold text-slate-800">' + escapeHtml(item.bppTanggal || '-') + '</div><div class="text-[11px] text-slate-500">' + escapeHtml(item.sumberDana || '-') + '</div></td>' +
+                    '<td class="py-3.5 px-3 max-w-xs"><div class="font-semibold text-slate-900 leading-snug">' + escapeHtml(item.uraianKegiatan) + '</div><div class="text-[11px] text-slate-500 mt-0.5">' + escapeHtml(item.namaPerusahaan) + ' (' + escapeHtml(item.jenisPengadaan) + ')' + (item.noArkas ? ' • <span class="text-emerald-700 font-medium">' + (isUnit() ? 'SIPD: ' : 'ARKAS: ') + escapeHtml(item.noArkas) + '</span>' : '') + '</div></td>' +
+                    '<td class="py-3.5 px-3"><div class="font-semibold text-emerald-800">' + escapeHtml(item.bppJenisPajak) + '</div><div class="text-[11px] text-slate-500">' + escapeHtml(item.jenisPajakRincian) + '</div></td>' +
+                    '<td class="py-3.5 px-3 text-right whitespace-nowrap"><div class="text-slate-700">Rp ' + formatRibuan(item.nilaiBelanja) + '</div><div class="font-bold text-emerald-800">Rp ' + formatRibuan(item.nilaiPajakSetor) + '</div></td>' +
+                    '<td class="py-3.5 px-3">' + billNtpnHtml + '</td>' +
+                    '<td class="py-3.5 px-3 text-center whitespace-nowrap space-x-1">' +
+                    (item.linkBukti ? '<a href="' + escapeHtml(item.linkBukti) + '" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-semibold inline-block" title="Buka Link Dokumen">🔗 Bukti</a>' : '') +
+                    '<button type="button" onclick="startEditRekap(' + i + ')" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-semibold cursor-pointer">Edit / NTPN</button>' +
+                    '<button type="button" onclick="printRowReceipt(' + i + ')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold cursor-pointer">Bukti</button>' +
+                    '</td>';
+                tbody.appendChild(tr);
+            }
+        }
+
+        window.currentRenderedItems = res.items || [];
+        $('pageInfoRiwayat').textContent = 'Halaman ' + res.currentPage + ' dari ' + res.totalPages + ' (Total ' + res.totalItems + ' data)';
+        $('btnPrevPage').disabled = res.currentPage <= 1;
+        $('btnNextPage').disabled = res.currentPage >= res.totalPages;
+        onRiwayatCheckboxChange();
+    }
+
+    function showReceiptModal(title, rec) {
+        $('modalTitle').textContent = title;
+        $('modalDesc').textContent = 'Berikut adalah ringkasan bukti rekapitulasi pajak yang tercatat:';
+        var row = function (l, v, last) {
+            return '<div class="flex justify-between gap-3' + (last ? '' : ' border-b border-slate-200 pb-1.5') + '"><span>' + l + '</span><strong class="text-right">' + v + '</strong></div>';
+        };
+        var docRow = '';
+        if (rec.isSiplah) {
+            var invRec = extractInvoiceSiplah_(rec);
+            docRow = row('Dokumen SIPLah / Status:', 'Invoice: ' + escapeHtml(invRec || '-') + ' <span class="text-blue-700 font-semibold text-xs ml-1.5">🛍️ Dipungut Marketplace</span>');
+        } else {
+            docRow = row('Kode Billing / NTPN:', escapeHtml(rec.noBilling || '-') + ' / ' + escapeHtml(rec.ntpn || 'Belum NTPN'));
+        }
+
+        $('modalReceiptBox').innerHTML =
+            row('Nomor Urut Rekap (NO):', '#' + escapeHtml(rec.no)) +
+            row('Satuan / Unit:', escapeHtml(rec.namaSekolah) + ' (' + escapeHtml(rec.npsn) + ')') +
+            row('Jenis Pajak BPP:', escapeHtml(rec.bppJenisPajak)) +
+            row('Objek Pajak Rincian:', escapeHtml(rec.jenisPajakRincian)) +
+            row('Nilai Belanja:', 'Rp ' + formatRibuan(rec.nilaiBelanja)) +
+            row('Nilai Pajak Setor:', '<span class="text-emerald-700 text-sm">Rp ' + formatRibuan(rec.nilaiPajakSetor) + '</span>') +
+            docRow +
+            row('Sumber Dana:', escapeHtml(rec.sumberDana), !rec.linkBukti) +
+            (rec.linkBukti ? row('Link Bukti Dokumen:', '<a href="' + escapeHtml(rec.linkBukti) + '" target="_blank" rel="noopener noreferrer" class="text-emerald-700 underline break-all">🔗 Buka Dokumen</a>', true) : '');
+        $('modalReceiptBox').classList.remove('hidden');
+        $('btnPrintReceipt').classList.remove('hidden');
+        $('btnGoHistory').classList.remove('hidden');
+        $('modalSuccess').classList.remove('hidden');
+    }
+
+    function printRowReceipt(idx) {
+        var item = window.currentRenderedItems && window.currentRenderedItems[idx];
+        if (!item) return;
+        lastSavedReceipt = item;
+        printCurrentReceipt();
+    }
+
+    /** Mengambil URL logo resmi Pemprov Sumut & Disdik Provsu dari konfigurasi terpusat logos.html */
+    function getPrintLogosConfig_() {
+        var cfg = window.SAJAK_LOGOS || {};
+        return {
+            pemprov: cfg.pemprov || 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Coat_of_arms_of_North_Sumatra.svg/250px-Coat_of_arms_of_North_Sumatra.svg.png',
+            pemprovFallback: cfg.pemprovFallback || 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Coat_of_arms_of_North_Sumatra.svg',
+            disdik: cfg.disdik || 'https://drive.google.com/thumbnail?id=160EuvOi9Oqr2n7cRck3KuumPRSqtN95m&sz=w400',
+            disdikFallback: cfg.disdikFallback || 'https://lh3.googleusercontent.com/d/160EuvOi9Oqr2n7cRck3KuumPRSqtN95m=w400'
+        };
+    }
+
+    function printCurrentReceipt() {
+        if (!lastSavedReceipt) return;
+        var r = lastSavedReceipt;
+        var logos = getPrintLogosConfig_();
+        var w = window.open('', '_blank', 'width=760,height=740');
+        if (!w) {
+            showToast('Pop-up diblokir browser. Izinkan pop-up untuk mencetak bukti.', 'warning');
+            return;
+        }
+        var tr = function (l, v, extra) {
+            return '<tr><td class="lbl">' + l + '</td><td class="val"' + (extra || '') + '>' + v + '</td></tr>';
+        };
+        var html =
+            '<!DOCTYPE html><html><head><title>Bukti Input Rekap Pajak #' + escapeHtml(r.no) + '</title>' +
+            '<style>' +
+            'body{font-family:Arial,sans-serif;padding:28px;color:#1e293b;margin:0;}' +
+            '.no-print{max-width:640px;margin:0 auto 12px auto;text-align:right;}' +
+            '.box{border:2px solid #047857;border-radius:12px;padding:22px 24px;max-width:640px;margin:0 auto;}' +
+            '.kop-wrap{border-bottom:3px double #0f172a;padding-bottom:10px;margin-bottom:14px;}' +
+            '.kop-tbl{width:100%;border-collapse:collapse;}' +
+            '.kop-tbl td{border:none;padding:0 4px;vertical-align:middle;}' +
+            '.kop-logo-left{height:52px;width:auto;object-fit:contain;display:block;}' +
+            '.kop-logo-right{height:52px;width:auto;object-fit:contain;display:block;margin-left:auto;}' +
+            '.kop-center{text-align:center;}' +
+            '.kop-inst{font-size:11px;font-weight:bold;letter-spacing:0.4px;color:#0f172a;text-transform:uppercase;margin:0;}' +
+            '.kop-dinas{font-size:11px;font-weight:bold;color:#047857;text-transform:uppercase;margin:1px 0 3px 0;}' +
+            '.kop-title{font-size:14px;font-weight:bold;color:#0f172a;margin:0;}' +
+            '.kop-sub{font-size:10px;color:#64748b;margin:2px 0 0 0;}' +
+            'table.data-tbl{width:100%;border-collapse:collapse;font-size:13px;}' +
+            'table.data-tbl td{padding:8px 4px;border-bottom:1px solid #e2e8f0;vertical-align:top;}' +
+            '.lbl{color:#64748b;width:42%;}' +
+            '.val{font-weight:bold;color:#0f172a;}' +
+            '@media print { .no-print{display:none;} body{padding:12px;} }' +
+            '</style>' +
+            '<script>function fbLogo(el,fb){if(!el.dataset.fb&&fb){el.dataset.fb="1";el.src=fb;}else{el.style.display="none";}}<' + '/script>' +
+            '</head><body onload="setTimeout(function(){window.print();},250)">' +
+            '<div class="no-print">' +
+            '<button onclick="window.print()" style="padding:6px 14px;background:#047857;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px;">🖨️ Cetak / Simpan PDF</button>' +
+            '<button onclick="window.close()" style="margin-left:6px;padding:6px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;">Tutup</button>' +
+            '</div>' +
+            '<div class="box">' +
+            '<div class="kop-wrap"><table class="kop-tbl"><tr>' +
+            '<td style="width:74px;"><img class="kop-logo-left" src="' + escapeHtml(logos.pemprov) + '" referrerpolicy="no-referrer" alt="Pemprov Sumut" onerror="fbLogo(this,\'' + escapeHtml(logos.pemprovFallback) + '\')"></td>' +
+            '<td class="kop-center">' +
+            '<div class="kop-inst">PEMERINTAH PROVINSI SUMATERA UTARA</div>' +
+            '<div class="kop-dinas">DINAS PENDIDIKAN</div>' +
+            '<div class="kop-title">BUKTI INPUT REKAPITULASI PAJAK</div>' +
+            '<div class="kop-sub">Subbagian Keuangan dan Program &bull; Sistem SAJAK</div>' +
+            '</td>' +
+            '<td style="width:74px;"><img class="kop-logo-right" src="' + escapeHtml(logos.disdik) + '" referrerpolicy="no-referrer" alt="Disdik Provsu" onerror="fbLogo(this,\'' + escapeHtml(logos.disdikFallback) + '\')"></td>' +
+            '</tr></table></div>' +
+            '<table class="data-tbl">' +
+            tr('Nomor Urut Rekap (NO)', '#' + escapeHtml(r.no)) +
+            tr('NPSN/Kode & Nama', escapeHtml(r.npsn) + ' - ' + escapeHtml(r.namaSekolah)) +
+            tr('No. Sub Unit Coretax', escapeHtml(r.subUnitCoretax || '-')) +
+            tr('Uraian Kegiatan', escapeHtml(r.uraianKegiatan)) +
+            tr('Rekanan / NPWP', escapeHtml(r.namaPerusahaan) + ' (' + escapeHtml(r.npwpPerusahaan) + ')') +
+            tr('Tanggal & Jenis Pajak BPP', escapeHtml(r.bppTanggal) + ' / ' + escapeHtml(r.bppJenisPajak)) +
+            tr('Kode / Rincian Objek Pajak', escapeHtml(r.jenisPajakRincian)) +
+            tr('Nilai Belanja', 'Rp ' + formatRibuan(r.nilaiBelanja)) +
+            tr('Nilai Pajak Setor', 'Rp ' + formatRibuan(r.nilaiPajakSetor), ' style="color:#047857;font-size:15px"') +
+            tr('Kode Billing / Invoice', escapeHtml(r.noBilling || '-')) +
+            tr('Nomor NTPN & Tgl Setor', escapeHtml(r.ntpn || (r.isSiplah ? 'SIPLah / E-Katalog' : 'Belum Diisi')) + ' (' + escapeHtml(r.tanggalSetor || '-') + ')') +
+            tr('Sumber Dana', escapeHtml(r.sumberDana)) +
+            (r.linkBukti ? tr('Link Bukti Dokumen', '<a href="' + escapeHtml(r.linkBukti) + '" target="_blank">' + escapeHtml(r.linkBukti) + '</a>') : '') +
+            '</table></div></body></html>';
+        w.document.write(html);
+        w.document.close();
+    }
+
+    /* ===================== KALKULATOR PAJAK OTOMATIS (PMK 58/59) ===================== */
+
+    function hitungPajakOtomatis() {
+        var rawBelanja = parseRupiah('p_nilaiBelanja');
+        if (!rawBelanja || rawBelanja <= 0) {
+            showToast('Silakan masukkan Nilai Belanja (Rp) terlebih dahulu sebelum menghitung pajak.', 'warning');
+            if ($('p_nilaiBelanja')) $('p_nilaiBelanja').focus();
+            return;
+        }
+
+        var bpp = String($('p_bppJenisPajak').value || '').trim();
+        var rincian = String($('p_jenisPajakRincian').value || '').trim();
+        var sumberDana = $('p_sumberDana') ? String($('p_sumberDana').value || '').trim() : '';
+        var jalurBelanja = $('p_jalurBelanja') ? $('p_jalurBelanja').value : 'NON_SIPLAH';
+        var isSiplah = (jalurBelanja === 'SIPLAH');
+        var badge = $('calcTaxBadge');
+
+        if (!bpp && !rincian) {
+            showToast('Pilih Jenis Pajak BPP atau Kode Objek Pajak Coretax terlebih dahulu.', 'warning');
+            return;
+        }
+
+        var unit = isUnit();
+
+        // KASUS 1: BELANJA MELALUI SIPLAH / E-KATALOG PPMSE (PMK No. 58/PMK.03/2022)
+        if (isSiplah) {
+            var dppSiplah = Math.round(rawBelanja * (100 / 111));
+            var ppnSiplah = Math.round(rawBelanja * (11 / 111));
+            var pph22Siplah = Math.round(dppSiplah * (0.5 / 100));
+
+            $('p_nilaiPajakSetor').value = '0';
+            if (badge) {
+                badge.className = 'text-[11px] text-blue-900 font-medium mt-1 bg-blue-50 p-2.5 rounded-xl border border-blue-200 leading-relaxed';
+                var platformName = unit ? 'E-Katalog / Toko Daring LKPP' : 'SIPLah';
+                var peranName = unit ? 'BPP Unit Dinas' : 'Bendahara Sekolah';
+                badge.innerHTML = '🛍️ <strong>Ketentuan ' + platformName + ' (PMK 58/2022):</strong><br>' +
+                    'Pajak otomatis dipungut marketplace mitra: PPN 11% (Rp ' + formatRibuan(ppnSiplah) + ') &amp; PPh 22 0,5% (Rp ' + formatRibuan(pph22Siplah) + ').<br>' +
+                    '<strong>Nilai Setor ' + peranName + ' = Rp 0</strong> (' + peranName + ' tidak membuat billing/NTPN mandiri).';
+                badge.classList.remove('hidden');
+            }
+            showToast('Ketentuan ' + (unit ? 'E-Katalog LKPP' : 'SIPLah') + ' (PMK 58/2022): Pajak dipungut otomatis oleh mitra marketplace. Nilai setor bendahara diatur Rp 0.', 'info');
+            return;
+        }
+
+        // KASUS 2: PPh PASAL 22
+        if (bpp === 'PPh Pasal 22' || (rincian && rincian.indexOf('22-') === 0)) {
+            if (!unit) {
+                if (/BOS|BOSP/i.test(sumberDana)) {
+                    $('p_nilaiPajakSetor').value = '0';
+                    if (badge) {
+                        badge.className = 'text-[11px] text-amber-900 font-medium mt-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 leading-relaxed';
+                        badge.innerHTML = '⚠️ <strong>Pengecualian PPh 22 (PMK 59/2022):</strong><br>' +
+                            'Belanja pengadaan barang yang didanai dari <strong>Dana BOSP</strong> (' + escapeHtml(sumberDana) + ') <strong>DIKECUALIKAN</strong> dari pemotongan PPh Pasal 22 oleh bendahara sekolah. Nilai pajak setor = Rp 0.';
+                        badge.classList.remove('hidden');
+                    }
+                    showToast('PMK 59/2022: Belanja barang dari Dana BOSP (' + sumberDana + ') dikecualikan dari pemotongan PPh 22. Nilai setor = Rp 0.', 'info');
+                    return;
+                }
+            } else {
+                if (rawBelanja <= 2000000) {
+                    $('p_nilaiPajakSetor').value = '0';
+                    if (badge) {
+                        badge.className = 'text-[11px] text-amber-900 font-medium mt-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 leading-relaxed';
+                        badge.innerHTML = 'ℹ️ <strong>Batas Minimal PPh 22 APBD (PMK 59/2022):</strong><br>' +
+                            'Pembayaran belanja barang APBD s.d. Rp 2.000.000 (tidak terpecah-pecah) <strong>DIKECUALIKAN</strong> dari pemungutan PPh Pasal 22. Nilai setor = Rp 0.';
+                        badge.classList.remove('hidden');
+                    }
+                    showToast('PMK 59/2022: Belanja barang APBD s.d. Rp 2.000.000 dikecualikan dari PPh Pasal 22. Nilai setor = Rp 0.', 'info');
+                    return;
+                } else {
+                    var dpp22Unit = Math.round(rawBelanja * (100 / 111));
+                    var hasil22Unit = Math.round(dpp22Unit * (1.5 / 100));
+                    $('p_nilaiPajakSetor').value = formatRibuan(hasil22Unit);
+                    if (badge) {
+                        badge.className = 'text-[11px] text-emerald-800 font-medium mt-1 bg-emerald-50 p-2 rounded-lg border border-emerald-300';
+                        badge.innerHTML = '⚡ <strong>PPh Pasal 22 APBD Dinas (PMK 59/2022):</strong> DPP (100/111): Rp ' + formatRibuan(dpp22Unit) + ' &bull; PPh 22 (1,5%): <strong>Rp ' + formatRibuan(hasil22Unit) + '</strong>.';
+                        badge.classList.remove('hidden');
+                    }
+                    return;
+                }
+            }
+        }
+
+        // KASUS 3: PPN & BATAS MINIMAL Rp 2.000.000 (PMK No. 59/PMK.03/2022)
+        var isPpn = (bpp === 'PPN') || (rincian.toUpperCase().indexOf('PPN') !== -1);
+        if (isPpn) {
+            if (rawBelanja <= 2000000) {
+                $('p_nilaiPajakSetor').value = '0';
+                if (badge) {
+                    badge.className = 'text-[11px] text-amber-900 font-medium mt-1 bg-amber-50 p-2.5 rounded-xl border border-amber-300 leading-relaxed';
+                    badge.innerHTML = 'ℹ️ <strong>Batas Minimal PPN (PMK 59/2022):</strong><br>' +
+                        'Transaksi belanja s.d. Rp 2.000.000 <strong>tidak dipungut PPN oleh bendahara</strong> (disetor langsung oleh penyedia). Nilai setor = Rp 0.';
+                    badge.classList.remove('hidden');
+                }
+                showToast('PMK 59/2022: Pembayaran s.d. Rp 2.000.000 tidak dipungut PPN oleh bendahara. Nilai setor = Rp 0.', 'info');
+                return;
+            } else {
+                var dppPpn = Math.round(rawBelanja * (100 / 111));
+                var hasilPpn = Math.round(rawBelanja * (11 / 111));
+                $('p_nilaiPajakSetor').value = formatRibuan(hasilPpn);
+                if (badge) {
+                    badge.className = 'text-[11px] text-emerald-800 font-medium mt-1 bg-emerald-50 p-2 rounded-lg border border-emerald-300';
+                    badge.innerHTML = '⚡ <strong>PPN 11% (PMK 59/2022):</strong> DPP 100/111: Rp ' + formatRibuan(dppPpn) + ' &bull; PPN Setor: <strong>Rp ' + formatRibuan(hasilPpn) + '</strong>.';
+                    badge.classList.remove('hidden');
+                }
+                return;
+            }
+        }
+
+        // KASUS 4: KODE OBJEK PAJAK CORETAX (BPMP / BP21 / BPPU)
+        var matchObj = null;
+        var kodeMatch = rincian.match(/^(\d{2}-\d{3}-\d{2})/);
+        var kode = kodeMatch ? kodeMatch[1] : '';
+
+        for (var i = 0; i < allObjekPajak.length; i++) {
+            var op = allObjekPajak[i];
+            if (kode && op.kode === kode) { matchObj = op; break; }
+            if (rincian && op.label === rincian) { matchObj = op; break; }
+            if (rincian && op.nama && rincian.toLowerCase().indexOf(op.nama.toLowerCase()) !== -1) { matchObj = op; break; }
+        }
+
+        var tarifStr = matchObj && matchObj.tarif ? matchObj.tarif : '';
+        var hasilPajak = 0;
+        var keteranganTarif = '';
+
+        if (tarifStr) {
+            var mTarif = tarifStr.match(/(\d+(?:[.,]\d+)?)\s*%/);
+            if (mTarif) {
+                var persen = parseFloat(mTarif[1].replace(',', '.'));
+                hasilPajak = Math.round(rawBelanja * (persen / 100));
+                keteranganTarif = 'Tarif Coretax ' + mTarif[1] + '% dari Nilai Belanja = Rp ' + formatRibuan(hasilPajak);
+            }
+        }
+
+        // KASUS 5: STANDAR FALLBACK
+        if (!hasilPajak) {
+            if (bpp === 'PPh Pasal 21') {
+                var subPph21 = $('p_subPph21Tarif') ? $('p_subPph21Tarif').value : '5_NON_PNS';
+                if (subPph21 === '0_PNS_GOL12') {
+                    $('p_nilaiPajakSetor').value = '0';
+                    if (badge) {
+                        badge.className = 'text-[11px] text-emerald-800 font-medium mt-1 bg-emerald-50 p-2 rounded-lg border border-emerald-300';
+                        badge.innerHTML = '⚡ <strong>PPh 21 PNS Gol I/II (PP 80/2010):</strong> Tarif 0% (Bebas Pajak). Nilai setor = Rp 0.';
+                        badge.classList.remove('hidden');
+                    }
+                    return;
+                } else if (subPph21 === '5_PNS_GOL3') {
+                    hasilPajak = Math.round(rawBelanja * (5 / 100));
+                    keteranganTarif = 'PPh 21 Final PNS/ASN Golongan III (Tarif 5% - PP 80/2010) = Rp ' + formatRibuan(hasilPajak);
+                } else if (subPph21 === '15_PNS_GOL4') {
+                    hasilPajak = Math.round(rawBelanja * (15 / 100));
+                    keteranganTarif = 'PPh 21 Final PNS/ASN Golongan IV (Tarif 15% - PP 80/2010) = Rp ' + formatRibuan(hasilPajak);
+                } else {
+                    hasilPajak = Math.round(rawBelanja * (5 / 100));
+                    keteranganTarif = 'PPh 21 Bukan Pegawai / Honor Non-ASN / Narasumber (Tarif 5%) = Rp ' + formatRibuan(hasilPajak);
+                }
+            } else if (bpp === 'PPh Pasal 22') {
+                var dpp22 = Math.round(rawBelanja * (100 / 111));
+                hasilPajak = Math.round(dpp22 * (1.5 / 100));
+                keteranganTarif = 'PPh Pasal 22 (1,5% dari DPP Rp ' + formatRibuan(dpp22) + ') = Rp ' + formatRibuan(hasilPajak);
+            } else if (bpp === 'PPh Pasal 23') {
+                hasilPajak = Math.round(rawBelanja * (2 / 100));
+                keteranganTarif = 'PPh Pasal 23 (Tarif Standar Jasa/Sewa 2%) = Rp ' + formatRibuan(hasilPajak);
+            } else if (bpp === 'PPh Pasal 4(2)') {
+                if (/sewa/i.test(rincian)) {
+                    hasilPajak = Math.round(rawBelanja * (10 / 100));
+                    keteranganTarif = 'PPh Final Pasal 4(2) Sewa Tanah/Bangunan 10% = Rp ' + formatRibuan(hasilPajak);
+                } else {
+                    hasilPajak = Math.round(rawBelanja * (1.75 / 100));
+                    keteranganTarif = 'PPh Final Pasal 4(2) Jasa Konstruksi (Estimasi 1,75%) = Rp ' + formatRibuan(hasilPajak);
+                }
+            }
+        }
+
+        if (hasilPajak > 0) {
+            $('p_nilaiPajakSetor').value = formatRibuan(hasilPajak);
+            if (badge) {
+                badge.className = 'text-[11px] text-emerald-800 font-medium mt-1 bg-emerald-50 p-2 rounded-lg border border-emerald-300';
+                badge.innerHTML = '⚡ ' + escapeHtml(keteranganTarif || ('Hasil hitung: Rp ' + formatRibuan(hasilPajak)));
+                badge.classList.remove('hidden');
+            }
+        } else {
+            showToast('Tarif tidak dapat dihitung otomatis untuk rincian ini. Silakan input Nilai Pajak Setor secara manual.', 'info');
+        }
+    }
+
+    /* ===================== CETAK BPP BULANAN (PDF) & EXCEL RIWAYAT ===================== */
+
+    function cetakBppBulanan() {
+        if (!sessionData || !isFieldRole()) return;
+        var profil = sessionData.operator.profil;
+        if (!profil) {
+            showToast('Silakan lengkapi dan simpan Profil terlebih dahulu sebelum mencetak BPP Bulanan.', 'warning');
+            switchTab('formProfil');
+            return;
+        }
+
+        var bulanFilter = $('filterBulanBpp') ? $('filterBulanBpp').value : '';
+        var tahunFilter = $('filterTahunBpp') ? $('filterTahunBpp').value : '2026';
+
+        var bulanNames = {
+            '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
+            '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
+            '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+        };
+        var periodeTitle = bulanFilter
+            ? 'BULAN ' + bulanNames[bulanFilter].toUpperCase() + ' ' + (tahunFilter || '2026')
+            : (tahunFilter ? 'TAHUN ' + tahunFilter : 'SEMUA PERIODE');
+
+        showSimpleModal('Menyiapkan Laporan BPP...', 'Sedang mengambil seluruh transaksi untuk periode ' + periodeTitle + '. Mohon tunggu...');
+
+        // Batas 5.000 baris selaras dengan ekspor Excel agar seluruh transaksi 1 tahun tercakup
+        callGasServer_('getRiwayatPajakByNpsn', [String(sessionData.operator.npsn), 1, 5000, '', '', String(sessionData.sessionToken)], function (res) {
+            closeModalSuccess();
+            if (!res || res.status === 'error') {
+                showToast(res && res.message ? res.message : 'Gagal mengambil data BPP.', 'error');
+                return;
+            }
+            var allItems = res.items || [];
+            var filtered = [];
+            for (var i = 0; i < allItems.length; i++) {
+                var it = allItems[i];
+                var tgl = it.bppTanggal || '';
+                if (tahunFilter && tgl.indexOf(tahunFilter) !== 0) continue;
+                if (bulanFilter) {
+                    var parts = tgl.split('-');
+                    if (parts.length >= 2 && parts[1] !== bulanFilter) continue;
+                }
+                filtered.push(it);
+            }
+
+            if (filtered.length === 0) {
+                showToast('Tidak ada transaksi pajak pada periode ' + periodeTitle + '. Pastikan tanggal BPP sesuai.', 'warning');
+                return;
+            }
+
+            renderPrintBppDocument(filtered, periodeTitle, profil);
+        }, function (err) {
+            closeModalSuccess();
+            showToast('Gagal mengambil data BPP: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function renderPrintBppDocument(items, periodeTitle, p) {
+        var unit = isUnit();
+        var w = window.open('', '_blank');
+        if (!w) {
+            showToast('Pop-up diblokir browser. Izinkan pop-up untuk mencetak BPP Bulanan.', 'warning');
+            return;
+        }
+
+        var totalBelanja = 0, totalPajak = 0, totalLunasNtpn = 0;
+        var rowsHtml = '';
+        for (var idx = 0; idx < items.length; idx++) {
+            var it = items[idx];
+            totalBelanja += Number(it.nilaiBelanja || 0);
+            totalPajak += Number(it.nilaiPajakSetor || 0);
+            // Hitung transaksi SIPLah / E-Katalog sebagai status lunas/terverifikasi pajak
+            if (it.ntpn || it.isSiplah) totalLunasNtpn++;
+
+            rowsHtml +=
+                '<tr>' +
+                '<td class="c">' + (idx + 1) + '</td>' +
+                '<td class="c">' + escapeHtml(it.bppTanggal || '-') + '</td>' +
+                '<td>' + escapeHtml(it.uraianKegiatan || '-') + '</td>' +
+                '<td>' + escapeHtml(it.namaPerusahaan || '-') + '</td>' +
+                '<td class="c">' + escapeHtml(it.npwpPerusahaan || '-') + '</td>' +
+                '<td class="c">' + escapeHtml(it.bppJenisPajak || '-') + '</td>' +
+                '<td>' + escapeHtml(it.jenisPajakRincian || '-') + '</td>' +
+                '<td class="r">' + formatRibuan(it.nilaiBelanja) + '</td>' +
+                '<td class="r font-bold">' + formatRibuan(it.nilaiPajakSetor) + '</td>' +
+                '<td class="c">' + escapeHtml(it.noBilling || '-') + '</td>' +
+                '<td class="c">' + (it.ntpn ? escapeHtml(it.ntpn) : (it.isSiplah ? '<span style="color:#0284c7;font-weight:600;">' + (unit ? 'E-Katalog' : 'SIPLah') + '</span>' : '<span style="color:#b91c1c;">Belum NTPN</span>')) + '</td>' +
+                '<td class="c">' + escapeHtml(it.tanggalSetor || '-') + '</td>' +
+                '<td class="c">' + escapeHtml(it.sumberDana || '-') + '</td>' +
+                '</tr>';
+        }
+
+        var signatureHtml = '';
+        var todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        if (unit) {
+            signatureHtml =
+                '<table class="sig-table"><tr>' +
+                '<td class="sig-col">' +
+                '<p class="sig-role">Kuasa Pengguna Anggaran (KPA)</p><div class="sig-space"></div>' +
+                '<p class="sig-name"><u>' + escapeHtml(p.namaKpa || p.namaKasek || '-') + '</u></p>' +
+                '<p class="sig-meta">NIP. ' + escapeHtml(p.nipKpa || '-') + '</p>' +
+                '<p class="sig-meta">Pangkat/Gol: ' + escapeHtml(p.pangkatKpa || '-') + '</p></td>' +
+                '<td class="sig-col">' +
+                '<p class="sig-role">Pejabat Pelaksana Teknis Kegiatan (PPTK)</p><div class="sig-space"></div>' +
+                '<p class="sig-name"><u>' + escapeHtml(p.namaPptk || '-') + '</u></p>' +
+                '<p class="sig-meta">NIP. ' + escapeHtml(p.nipPptk || '-') + '</p>' +
+                '<p class="sig-meta">Pangkat/Gol: ' + escapeHtml(p.pangkatPptk || '-') + '</p></td>' +
+                '<td class="sig-col">' +
+                '<p class="sig-date">Medan, ' + todayStr + '</p>' +
+                '<p class="sig-role">Bendahara Pengeluaran Pembantu (BPP)</p><div class="sig-space"></div>' +
+                '<p class="sig-name"><u>' + escapeHtml(p.namaBpp || p.namaBendahara || '-') + '</u></p>' +
+                '<p class="sig-meta">NIP. ' + escapeHtml(p.nipBpp || '-') + '</p>' +
+                '<p class="sig-meta">Pangkat/Gol: ' + escapeHtml(p.pangkatBpp || '-') + '</p></td>' +
+                '</tr></table>';
+        } else {
+            var kota = p.kabKota || 'Sumatera Utara';
+            signatureHtml =
+                '<table class="sig-table"><tr>' +
+                '<td class="sig-col" style="width:50%;">' +
+                '<p class="sig-role">Mengetahui,<br>Kepala ' + escapeHtml(p.namaSekolah) + '</p><div class="sig-space"></div>' +
+                '<p class="sig-name"><u>' + escapeHtml(p.namaKasek || '-') + '</u></p>' +
+                '<p class="sig-meta">NIK. ' + escapeHtml(p.nikKasek || '-') + '</p></td>' +
+                '<td class="sig-col" style="width:50%;">' +
+                '<p class="sig-date">' + escapeHtml(kota) + ', ' + todayStr + '</p>' +
+                '<p class="sig-role">Bendahara Sekolah</p><div class="sig-space"></div>' +
+                '<p class="sig-name"><u>' + escapeHtml(p.namaBendahara || '-') + '</u></p>' +
+                '<p class="sig-meta">NIK. ' + escapeHtml(p.nikBendahara || '-') + '</p></td>' +
+                '</tr></table>';
+        }
+
+        var logos = getPrintLogosConfig_();
+
+        var docHtml =
+            '<!DOCTYPE html><html><head><title>Buku Pembantu Pajak - ' + escapeHtml(p.namaSekolah) + '</title>' +
+            '<style>' +
+            '@page { size: A4 landscape; margin: 10mm; }' +
+            'body { font-family: "Arial", sans-serif; font-size: 11px; color: #1e293b; margin: 0; padding: 12px; }' +
+            '.kop { border-bottom: 3px double #0f172a; padding-bottom: 8px; margin-bottom: 12px; }' +
+            '.kop-table { width: 100%; border-collapse: collapse; }' +
+            '.kop-table td { border: none; vertical-align: middle; padding: 0 8px; }' +
+            '.kop-logo-left { height: 58px; width: auto; object-fit: contain; display: block; }' +
+            '.kop-logo-right { height: 58px; width: auto; object-fit: contain; display: block; margin-left: auto; }' +
+            '.kop-center { text-align: center; }' +
+            '.kop-center h1 { font-size: 15px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a; }' +
+            '.kop-center h2 { font-size: 13px; margin: 2px 0; color: #047857; text-transform: uppercase; }' +
+            '.kop-center h3 { font-size: 12px; margin: 2px 0; font-weight: bold; color: #1e293b; }' +
+            '.meta-table { width: 100%; margin-bottom: 10px; font-size: 11px; border-collapse: collapse; }' +
+            '.meta-table td { padding: 2px 6px; }' +
+            '.bpp-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }' +
+            '.bpp-table th, .bpp-table td { border: 1px solid #475569; padding: 4px 5px; }' +
+            '.bpp-table th { background: #e2e8f0; font-weight: bold; text-align: center; }' +
+            '.c { text-align: center; } .r { text-align: right; } .font-bold { font-weight: bold; }' +
+            '.tfoot-row td { background: #f1f5f9; font-weight: bold; }' +
+            '.sig-table { width: 100%; margin-top: 25px; border-collapse: collapse; page-break-inside: avoid; }' +
+            '.sig-col { text-align: center; vertical-align: top; padding: 0 15px; }' +
+            '.sig-role { font-size: 11px; font-weight: bold; margin: 0 0 4px 0; }' +
+            '.sig-date { font-size: 11px; margin: 0 0 2px 0; }' +
+            '.sig-space { height: 60px; }' +
+            '.sig-name { font-size: 11px; font-weight: bold; margin: 0; }' +
+            '.sig-meta { font-size: 10px; color: #475569; margin: 1px 0; }' +
+            '@media print { .no-print { display: none; } }' +
+            '</style>' +
+            '<script>function fbLogo(el,fb){if(!el.dataset.fb&&fb){el.dataset.fb="1";el.src=fb;}else{el.style.display="none";}}<' + '/script>' +
+            '</head><body onload="setTimeout(function(){window.print();},250)">' +
+            '<div class="no-print" style="margin-bottom:10px;text-align:right;">' +
+            '<button onclick="window.print()" style="padding:6px 14px;background:#047857;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨️ Cetak / Simpan PDF</button>' +
+            '<button onclick="window.close()" style="margin-left:6px;padding:6px 12px;border:1px solid #cbd5e1;background:white;border-radius:6px;cursor:pointer;">Tutup</button></div>' +
+            '<div class="kop"><table class="kop-table"><tr>' +
+            '<td style="width:92px;"><img class="kop-logo-left" src="' + escapeHtml(logos.pemprov) + '" referrerpolicy="no-referrer" alt="Pemprov Sumut" onerror="fbLogo(this,\'' + escapeHtml(logos.pemprovFallback) + '\')"></td>' +
+            '<td class="kop-center"><h1>PEMERINTAH PROVINSI SUMATERA UTARA</h1><h2>DINAS PENDIDIKAN</h2><h3>BUKU PEMBANTU PAJAK (BPP) — ' + escapeHtml(periodeTitle) + '</h3></td>' +
+            '<td style="width:92px;"><img class="kop-logo-right" src="' + escapeHtml(logos.disdik) + '" referrerpolicy="no-referrer" alt="Disdik Provsu" onerror="fbLogo(this,\'' + escapeHtml(logos.disdikFallback) + '\')"></td>' +
+            '</tr></table></div>' +
+            '<table class="meta-table">' +
+            '<tr><td style="width:20%;font-weight:bold;">Satuan / Unit Kerja</td><td style="width:40%;">: ' + escapeHtml(p.namaSekolah) + '</td><td style="width:15%;font-weight:bold;">No. Sub Unit Coretax</td><td>: ' + escapeHtml(p.subUnitCoretax || '-') + '</td></tr>' +
+            '<tr><td style="font-weight:bold;">NPSN / Kode Unit</td><td>: ' + escapeHtml(p.npsn) + '</td><td style="font-weight:bold;">Cabang Dinas / Wilayah</td><td>: ' + escapeHtml(unit ? (p.wilayahBinaan || p.kabKota || 'Dinas Pendidikan Provsu') : p.cabangDinas) + '</td></tr>' +
+            '</table>' +
+            '<table class="bpp-table"><thead><tr>' +
+            '<th style="width:25px;">No</th><th style="width:65px;">Tgl BPP</th><th>Uraian Kegiatan</th><th>Rekanan / Penerima</th><th style="width:105px;">NPWP Rekanan</th><th style="width:75px;">Jenis Pajak</th><th>Kode &amp; Rincian Coretax</th><th style="width:85px;">Nilai Belanja (Rp)</th><th style="width:85px;">Pajak Setor (Rp)</th><th style="width:95px;">Kode Billing</th><th style="width:105px;">NTPN</th><th style="width:65px;">Tgl Setor</th><th style="width:75px;">Sumber Dana</th>' +
+            '</tr></thead><tbody>' + rowsHtml + '</tbody><tfoot><tr class="tfoot-row">' +
+            '<td colspan="7" class="r">TOTAL (' + items.length + ' Transaksi • ' + totalLunasNtpn + ' Lunas NTPN/SIPLah) :</td>' +
+            '<td class="r">Rp ' + formatRibuan(totalBelanja) + '</td>' +
+            '<td class="r">Rp ' + formatRibuan(totalPajak) + '</td>' +
+            '<td colspan="4" class="c">Pajak Terverifikasi: ' + totalLunasNtpn + ' / ' + items.length + '</td>' +
+            '</tr></tfoot></table>' + signatureHtml + '</body></html>';
+
+        w.document.write(docHtml);
+        w.document.close();
+    }
+
+    function exportRiwayatPajakExcel() {
+        if (!sessionData || !isFieldRole()) return;
+        var profil = (sessionData.operator && sessionData.operator.profil) || {};
+        var bulanFilter = $('filterBulanBpp') ? $('filterBulanBpp').value : '';
+        var tahunFilter = $('filterTahunBpp') ? $('filterTahunBpp').value : '2026';
+
+        var bulanNames = {
+            '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
+            '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
+            '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+        };
+        var periodeTitle = bulanFilter
+            ? 'BULAN ' + (bulanNames[bulanFilter] || bulanFilter).toUpperCase() + ' ' + (tahunFilter || '2026')
+            : (tahunFilter ? 'TAHUN ' + tahunFilter : 'SEMUA PERIODE');
+
+        showSimpleModal('Menyiapkan Excel Riwayat Pajak...', 'Sedang mengambil seluruh transaksi untuk diunduh ke Excel. Mohon tunggu...');
+
+        callGasServer_('getRiwayatPajakByNpsn', [String(sessionData.operator.npsn), 1, 5000, '', '', String(sessionData.sessionToken)], function (res) {
+            closeModalSuccess();
+            if (!res || res.status === 'error') {
+                showToast(res && res.message ? res.message : 'Gagal mengambil data Excel.', 'error');
+                return;
+            }
+            var allItems = res.items || [];
+            var filtered = [];
+            for (var i = 0; i < allItems.length; i++) {
+                var it = allItems[i];
+                var tgl = it.bppTanggal || '';
+                if (tahunFilter && tgl.indexOf(tahunFilter) !== 0) continue;
+                if (bulanFilter) {
+                    var parts = tgl.split('-');
+                    if (parts.length >= 2 && parts[1] !== bulanFilter) continue;
+                }
+                filtered.push(it);
+            }
+
+            if (filtered.length === 0) {
+                showToast('Tidak ada transaksi pajak pada periode ' + periodeTitle + ' untuk diunduh.', 'warning');
+                return;
+            }
+
+            var namaInstansi = profil.namaSekolah || sessionData.operator.namaOperator || 'Instansi';
+            var npsnInstansi = sessionData.operator.npsn || '-';
+            var unit = isUnit();
+
+            var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
+                '<head><meta charset="utf-8">' +
+                '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Riwayat Pajak</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+                '<style>' +
+                'body { font-family: Calibri, sans-serif; font-size: 11pt; }' +
+                'table { border-collapse: collapse; width: 100%; }' +
+                'th, td { border: 0.5pt solid #94a3b8; padding: 6px 8px; vertical-align: middle; }' +
+                'th { background-color: #065f46; color: #ffffff; font-weight: bold; text-align: center; }' +
+                '.num { mso-number-format:"\\#\\,\\#\\#0"; text-align: right; }' +
+                '.txt { mso-number-format:"\\@"; text-align: left; }' +
+                '.c { text-align: center; }' +
+                '.title { font-size: 14pt; font-weight: bold; text-align: center; color: #0f172a; border: none; }' +
+                '.subtitle { font-size: 10.5pt; text-align: center; color: #475569; border: none; }' +
+                '.total-row { background-color: #f1f5f9; font-weight: bold; }' +
+                '</style></head><body><table>' +
+                '<tr><td colspan="15" class="title">BUKU PEMBANTU PAJAK ' + (unit ? 'UNIT KERJA / CABANG DINAS' : 'SATUAN PENDIDIKAN') + '</td></tr>' +
+                '<tr><td colspan="15" class="subtitle">' + escapeHtml(namaInstansi) + ' (NPSN / KODE: ' + escapeHtml(npsnInstansi) + ') — PERIODE: ' + periodeTitle + '</td></tr>' +
+                '<tr><td colspan="15" style="border:none;height:12px;"></td></tr>' +
+                '<thead><tr><th>No</th><th>Tgl BPP</th><th>No Bukti</th><th>Uraian Belanja / Kegiatan</th><th>Nama Rekanan / Toko</th><th>NPWP Rekanan</th><th>Jenis Pajak</th><th>Kode &amp; Rincian Pajak</th><th>Nilai Belanja (Rp)</th><th>Pajak Setor (Rp)</th><th>No Billing / Invoice</th><th>NTPN / Status Setor</th><th>Tgl Setor</th><th>Sumber Dana</th><th>Keterangan</th></tr></thead><tbody>';
+
+            var totBelanja = 0, totPajak = 0, countNtpn = 0;
+            for (var j = 0; j < filtered.length; j++) {
+                var item = filtered[j];
+                totBelanja += Number(item.nilaiBelanja || 0);
+                totPajak += Number(item.nilaiPajakSetor || 0);
+                if (item.ntpn || item.isSiplah) countNtpn++;
+
+                var statusNtpn = item.ntpn ? item.ntpn : (item.isSiplah ? (unit ? 'E-Katalog' : 'SIPLah') : 'Belum NTPN');
+                html += '<tr>' +
+                    '<td class="c">' + (j + 1) + '</td>' +
+                    '<td class="c txt">' + escapeHtml(item.bppTanggal || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.noArkas || item.no || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.uraianKegiatan || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.namaPerusahaan || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.npwpPerusahaan || '-') + '</td>' +
+                    '<td class="c txt">' + escapeHtml(item.bppJenisPajak || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.jenisPajakRincian || '-') + '</td>' +
+                    '<td class="num">' + Number(item.nilaiBelanja || 0) + '</td>' +
+                    '<td class="num font-bold">' + Number(item.nilaiPajakSetor || 0) + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.noBilling || '-') + '</td>' +
+                    '<td class="c txt">' + escapeHtml(statusNtpn) + '</td>' +
+                    '<td class="c txt">' + escapeHtml(item.tanggalSetor || '-') + '</td>' +
+                    '<td class="c txt">' + escapeHtml(item.sumberDana || '-') + '</td>' +
+                    '<td class="txt">' + escapeHtml(item.ket || '-') + '</td>' +
+                    '</tr>';
+            }
+
+            html += '<tr class="total-row">' +
+                '<td colspan="8" style="text-align:right;">TOTAL (' + filtered.length + ' Transaksi • ' + countNtpn + ' Ber-NTPN / SIPLah):</td>' +
+                '<td class="num">' + totBelanja + '</td>' +
+                '<td class="num">' + totPajak + '</td>' +
+                '<td colspan="5" class="c">Pajak Terverifikasi: ' + countNtpn + ' / ' + filtered.length + '</td>' +
+                '</tr></tbody></table></body></html>';
+
+            var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            var safeName = (namaInstansi || 'SEKOLAH').replace(/[^A-Za-z0-9]/g, '_').substring(0, 30);
+            a.download = 'RIWAYAT_PAJAK_' + safeName + '_' + (bulanFilter ? ('BLN_' + bulanFilter + '_') : '') + (tahunFilter || '2026') + '.xls';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 2500);
+            showToast('Berhasil mengunduh ' + filtered.length + ' transaksi ke Excel.', 'success');
+        }, function (err) {
+            closeModalSuccess();
+            showToast('Gagal mengambil data untuk Excel: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    /* ===================== INOVASI 1C: AUTO-SAVE DRAFT FORMULIR ===================== */
+
+    function getDraftStorageKey() {
+        var id = (sessionData && sessionData.operator) ? (sessionData.operator.npsn || 'user') : 'general';
+        return 'sajak_draft_form_' + id;
+    }
+
+    function initFormDraftAutoSave() {
+        var form = $('rekapPajakForm');
+        if (!form || form.dataset.draftInited) return;
+        form.dataset.draftInited = 'true';
+        var scheduleSave = function () {
+            if ($('p_editRowIdx') && $('p_editRowIdx').value) return;
+            clearTimeout(draftSaveTimer);
+            draftSaveTimer = setTimeout(saveFormDraft, 600);
+        };
+        form.addEventListener('input', scheduleSave);
+        form.addEventListener('change', scheduleSave);
+    }
+
+    function saveFormDraft() {
+        if ($('p_editRowIdx') && $('p_editRowIdx').value) return;
+        var fields = {
+            uraianKegiatan: $('p_uraianKegiatan') ? $('p_uraianKegiatan').value : '',
+            jenisPengadaan: $('p_jenisPengadaan') ? $('p_jenisPengadaan').value : '',
+            namaPerusahaan: $('p_namaPerusahaan') ? $('p_namaPerusahaan').value : '',
+            alamatPerusahaan: $('p_alamatPerusahaan') ? $('p_alamatPerusahaan').value : '',
+            npwpPerusahaan: $('p_npwpPerusahaan') ? $('p_npwpPerusahaan').value : '',
+            bppTanggal: $('p_bppTanggal') ? $('p_bppTanggal').value : '',
+            bppJenisPajak: $('p_bppJenisPajak') ? $('p_bppJenisPajak').value : '',
+            nilaiBelanja: $('p_nilaiBelanja') ? $('p_nilaiBelanja').value : '',
+            nilaiPajakSetor: $('p_nilaiPajakSetor') ? $('p_nilaiPajakSetor').value : '',
+            jenisPajakRincian: $('p_jenisPajakRincian') ? $('p_jenisPajakRincian').value : '',
+            tanggalBilling: $('p_tanggalBilling') ? $('p_tanggalBilling').value : '',
+            noBilling: $('p_noBilling') ? $('p_noBilling').value : '',
+            noFaktur: $('p_noFaktur') ? $('p_noFaktur').value : '',
+            noBupot: $('p_noBupot') ? $('p_noBupot').value : '',
+            ntpn: $('p_ntpn') ? $('p_ntpn').value : '',
+            tanggalSetor: $('p_tanggalSetor') ? $('p_tanggalSetor').value : '',
+            sumberDana: $('p_sumberDana') ? $('p_sumberDana').value : '',
+            noArkas: $('p_noArkas') ? $('p_noArkas').value : '',
+            linkBukti: $('p_linkBukti') ? $('p_linkBukti').value : '',
+            ket: $('p_ket') ? $('p_ket').value : '',
+            noInvoiceSiplah: $('p_noInvoiceSiplah') ? $('p_noInvoiceSiplah').value : '',
+            jalurBelanja: $('p_jalurBelanja') ? $('p_jalurBelanja').value : 'NON_SIPLAH',
+            savedAt: new Date().toISOString()
+        };
+
+        var hasContent = fields.uraianKegiatan || fields.namaPerusahaan || fields.nilaiBelanja || fields.noBilling || fields.noArkas;
+        if (hasContent) {
+            try { localStorage.setItem(getDraftStorageKey(), JSON.stringify(fields)); } catch (e) { }
+        }
+    }
+
+    function checkFormDraft() {
+        if ($('p_editRowIdx') && $('p_editRowIdx').value) {
+            if ($('draftNoticeBanner')) $('draftNoticeBanner').classList.add('hidden');
+            return;
+        }
+        var raw = null;
+        try { raw = localStorage.getItem(getDraftStorageKey()); } catch (e) { }
+        if (!raw) {
+            if ($('draftNoticeBanner')) $('draftNoticeBanner').classList.add('hidden');
+            return;
+        }
+        try {
+            var data = JSON.parse(raw);
+            var dateStr = data.savedAt ? new Date(data.savedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : 'sebelumnya';
+            if ($('draftTimestamp')) $('draftTimestamp').textContent = 'Draf tersimpan otomatis di browser ini pada: ' + dateStr;
+            if ($('draftNoticeBanner')) $('draftNoticeBanner').classList.remove('hidden');
+        } catch (e) { }
+    }
+
+    function restoreFormDraft() {
+        var raw = null;
+        try { raw = localStorage.getItem(getDraftStorageKey()); } catch (e) { }
+        if (!raw) return;
+        try {
+            var d = JSON.parse(raw);
+            if (d.uraianKegiatan) $('p_uraianKegiatan').value = d.uraianKegiatan;
+            if (d.jenisPengadaan) setSelectValue('p_jenisPengadaan', d.jenisPengadaan);
+            if (d.namaPerusahaan) $('p_namaPerusahaan').value = d.namaPerusahaan;
+            if (d.alamatPerusahaan) $('p_alamatPerusahaan').value = d.alamatPerusahaan;
+            if (d.npwpPerusahaan) $('p_npwpPerusahaan').value = d.npwpPerusahaan;
+            if (d.bppTanggal) $('p_bppTanggal').value = d.bppTanggal;
+            if (d.bppJenisPajak) {
+                setSelectValue('p_bppJenisPajak', d.bppJenisPajak);
+                handleBppJenisPajakChange(d.bppJenisPajak);
+            }
+            if (d.nilaiBelanja) $('p_nilaiBelanja').value = d.nilaiBelanja;
+            if (d.nilaiPajakSetor) $('p_nilaiPajakSetor').value = d.nilaiPajakSetor;
+            if (d.jenisPajakRincian) $('p_jenisPajakRincian').value = d.jenisPajakRincian;
+            if (d.tanggalBilling) $('p_tanggalBilling').value = d.tanggalBilling;
+            if (d.noBilling) $('p_noBilling').value = d.noBilling;
+            if (d.noFaktur) $('p_noFaktur').value = d.noFaktur;
+            if (d.noBupot) $('p_noBupot').value = d.noBupot;
+            if (d.ntpn) $('p_ntpn').value = d.ntpn;
+            if (d.tanggalSetor) $('p_tanggalSetor').value = d.tanggalSetor;
+            if (d.sumberDana) setSelectValue('p_sumberDana', d.sumberDana);
+            if (d.noArkas && $('p_noArkas')) $('p_noArkas').value = d.noArkas;
+            if (d.linkBukti && $('p_linkBukti')) $('p_linkBukti').value = d.linkBukti;
+            if (d.ket) $('p_ket').value = d.ket;
+            if (d.noInvoiceSiplah && $('p_noInvoiceSiplah')) $('p_noInvoiceSiplah').value = d.noInvoiceSiplah;
+            if (d.jalurBelanja && $('p_jalurBelanja')) {
+                $('p_jalurBelanja').value = d.jalurBelanja;
+                handleJalurBelanjaChange(d.jalurBelanja);
+            }
+            refreshDigitBadges('p_');
+            if ($('draftNoticeBanner')) $('draftNoticeBanner').classList.add('hidden');
+            showToast('Draf formulir berhasil dipulihkan.', 'success');
+        } catch (e) { }
+    }
+
+    function discardFormDraft() {
+        try { localStorage.removeItem(getDraftStorageKey()); } catch (e) { }
+        if ($('draftNoticeBanner')) $('draftNoticeBanner').classList.add('hidden');
+    }
+
+    /* ===================== INOVASI 1B: SUSUL NTPN MASSAL ===================== */
+
+    function toggleSelectAllRiwayat(masterCb) {
+        var cbs = document.querySelectorAll('#tbodyRiwayat input.riwayat-cb:not(:disabled)');
+        for (var i = 0; i < cbs.length; i++) {
+            cbs[i].checked = masterCb.checked;
+        }
+        onRiwayatCheckboxChange();
+    }
+
+    function onRiwayatCheckboxChange() {
+        var cbs = document.querySelectorAll('#tbodyRiwayat input.riwayat-cb:checked');
+        selectedNtpnItems = [];
+        for (var i = 0; i < cbs.length; i++) {
+            selectedNtpnItems.push({
+                no: cbs[i].dataset.no,
+                rowIdx: cbs[i].dataset.rowidx,
+                uraian: cbs[i].dataset.uraian,
+                pajak: Number(cbs[i].dataset.pajak || 0),
+                billing: cbs[i].dataset.billing || ''
+            });
+        }
+        var count = selectedNtpnItems.length;
+        var bar = $('bulkNtpnBar');
+        if (count > 0) {
+            if (bar) bar.classList.remove('hidden');
+            if ($('selectedNtpnCount')) $('selectedNtpnCount').textContent = count;
+        } else {
+            if (bar) bar.classList.add('hidden');
+            if ($('checkAllRiwayat')) $('checkAllRiwayat').checked = false;
+        }
+    }
+
+    function clearSelectedNtpn() {
+        var cbs = document.querySelectorAll('#tbodyRiwayat input.riwayat-cb');
+        for (var i = 0; i < cbs.length; i++) cbs[i].checked = false;
+        if ($('checkAllRiwayat')) $('checkAllRiwayat').checked = false;
+        selectedNtpnItems = [];
+        if ($('bulkNtpnBar')) $('bulkNtpnBar').classList.add('hidden');
+    }
+
+    function openBulkNtpnModal() {
+        if (!selectedNtpnItems.length) {
+            showToast('Pilih minimal 1 transaksi yang belum ber-NTPN.', 'warning');
+            return;
+        }
+        $('bulkNtpnTargetCount').textContent = selectedNtpnItems.length;
+        $('bulk_ntpn').value = '';
+        $('bulkNtpnCounter').textContent = '0/16';
+        $('bulk_tanggalSetor').value = new Date().toISOString().slice(0, 10);
+        $('bulkNtpnError').classList.add('hidden');
+
+        var listContainer = $('bulkNtpnItemsList');
+        listContainer.innerHTML = '';
+        selectedNtpnItems.forEach(function (it) {
+            var d = document.createElement('div');
+            d.className = 'flex items-center justify-between py-1 border-b border-slate-100 last:border-0';
+            d.innerHTML = '<div><strong class="text-slate-800">#' + escapeHtml(it.no) + '</strong> &bull; ' + escapeHtml(it.uraian.slice(0, 40)) + (it.uraian.length > 40 ? '...' : '') + '</div><div class="font-bold text-emerald-800 text-right">Rp ' + formatRibuan(it.pajak) + '</div>';
+            listContainer.appendChild(d);
+        });
+
+        $('modalBulkNtpn').classList.remove('hidden');
+    }
+
+    function closeBulkNtpnModal() {
+        $('modalBulkNtpn').classList.add('hidden');
+    }
+
+    function submitBulkNtpn(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var ntpn = String($('bulk_ntpn').value || '').trim().toUpperCase();
+        var tgl = String($('bulk_tanggalSetor').value || '').trim();
+        var err = $('bulkNtpnError');
+        err.classList.add('hidden');
+
+        if (ntpn.length !== 16 || !/^[A-Z0-9]{16}$/.test(ntpn)) {
+            err.textContent = 'Kode NTPN harus tepat 16 karakter alfanumerik (huruf dan angka).';
+            err.classList.remove('hidden');
+            return;
+        }
+        if (!tgl) {
+            err.textContent = 'Tanggal setor wajib dipilih.';
+            err.classList.remove('hidden');
+            return;
+        }
+
+        var currentNpsn = (sessionData && sessionData.operator) ? String(sessionData.operator.npsn) : '';
+        var updates = selectedNtpnItems.map(function (it) {
+            return { no: String(it.no), rowIdx: Number(it.rowIdx || 0), npsn: currentNpsn, ntpn: ntpn, tanggalSetor: tgl };
+        });
+
+        var btn = $('btnSubmitBulkNtpn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Menyimpan...';
+
+        callGasServer_('updateBatchNtpn', [updates, String(sessionData.sessionToken)], function (res) {
+            btn.disabled = false;
+            btn.innerHTML = 'Simpan NTPN';
+            if (!res || res.status !== 'success') {
+                err.textContent = res && res.message ? res.message : 'Gagal memperbarui NTPN.';
+                err.classList.remove('hidden');
+                return;
+            }
+            closeBulkNtpnModal();
+            clearSelectedNtpn();
+            historyCache = {};
+            loadRiwayatServer(currentRiwayatPage, true);
+            var updatedCount = res.updatedCount !== undefined ? res.updatedCount : (res.count !== undefined ? res.count : updates.length);
+            showSimpleModal('NTPN Berhasil Diperbarui!', updatedCount + ' transaksi telah berhasil diperbarui dengan NTPN: ' + ntpn + ' (Tgl Setor: ' + tgl + ').');
+        }, function (ex) {
+            btn.disabled = false;
+            btn.innerHTML = 'Simpan NTPN';
+            err.textContent = 'Gagal menyimpan ke server: ' + (ex && ex.message ? ex.message : String(ex));
+            err.classList.remove('hidden');
+        });
+    }
+
+    /* ===================== INOVASI 1A: IMPORT CEPAT BKU ARKAS ===================== */
+
+    function openImportArkasModal() {
+        parsedArkasItems = [];
+        $('arkasFileInput').value = '';
+        $('arkasFileLabel').textContent = 'Pilih atau Seret File Excel BKU dari ARKAS (.xlsx, .xls, .csv)';
+        $('arkasPreviewContainer').classList.add('hidden');
+        $('arkasParseLoading').classList.add('hidden');
+        $('btnSubmitArkasBatch').disabled = true;
+        $('modalImportArkas').classList.remove('hidden');
+    }
+
+    function closeImportArkasModal() {
+        $('modalImportArkas').classList.add('hidden');
+    }
+
+    function handleArkasFileSelect(e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        $('arkasFileLabel').textContent = 'File: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+        $('arkasParseLoading').classList.remove('hidden');
+        $('arkasPreviewContainer').classList.add('hidden');
+        $('btnSubmitArkasBatch').disabled = true;
+
+        var reader = new FileReader();
+        reader.onload = function (evt) {
+            try {
+                var data = new Uint8Array(evt.target.result);
+                if (typeof XLSX === 'undefined') {
+                    showToast('Library SheetJS belum termuat. Pastikan koneksi internet aktif.', 'error');
+                    $('arkasParseLoading').classList.add('hidden');
+                    return;
+                }
+                var wb = XLSX.read(data, { type: 'array', cellDates: true });
+                var firstSheetName = wb.SheetNames[0];
+                var ws = wb.Sheets[firstSheetName];
+                var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+                processArkasRows(rows);
+            } catch (err) {
+                showToast('Gagal membaca file Excel/CSV: ' + err.message, 'error');
+                $('arkasParseLoading').classList.add('hidden');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function processArkasRows(rows) {
+        $('arkasParseLoading').classList.add('hidden');
+        if (!rows || rows.length < 2) {
+            showToast('File kosong atau format BKU ARKAS tidak dikenali.', 'warning');
+            return;
+        }
+
+        var headerRowIdx = -1;
+        var colMap = { no: -1, tanggal: -1, noBukti: -1, uraian: -1, pengeluaran: -1, penerimaan: -1, saldo: -1 };
+
+        for (var r = 0; r < Math.min(rows.length, 15); r++) {
+            var row = rows[r];
+            if (!Array.isArray(row)) continue;
+            var rowStr = row.map(function (c) { return String(c || '').toLowerCase(); }).join(' ');
+            if (rowStr.indexOf('bukti') >= 0 || (rowStr.indexOf('uraian') >= 0 && (rowStr.indexOf('pengeluaran') >= 0 || rowStr.indexOf('debet') >= 0))) {
+                headerRowIdx = r;
+                for (var c = 0; c < row.length; c++) {
+                    var h = String(row[c] || '').toLowerCase().trim();
+                    if (h.indexOf('no') === 0 && h.indexOf('bukti') < 0) colMap.no = c;
+                    if (h.indexOf('tanggal') >= 0 || h === 'tgl') colMap.tanggal = c;
+                    if (h.indexOf('bukti') >= 0 || h.indexOf('kuitansi') >= 0) colMap.noBukti = c;
+                    if (h.indexOf('uraian') >= 0 || h.indexOf('keterangan') >= 0 || h.indexOf('transaksi') >= 0) colMap.uraian = c;
+                    if (h.indexOf('pengeluaran') >= 0 || h.indexOf('debet') >= 0 || h.indexOf('keluar') >= 0) colMap.pengeluaran = c;
+                    if (h.indexOf('penerimaan') >= 0 || h.indexOf('kredit') >= 0 || h.indexOf('masuk') >= 0) colMap.penerimaan = c;
+                }
+                break;
+            }
+        }
+
+        if (headerRowIdx === -1) {
+            headerRowIdx = 0;
+            colMap = { no: 0, tanggal: 1, noBukti: 2, uraian: 3, penerimaan: 4, pengeluaran: 5, saldo: 6 };
+        } else {
+            if (colMap.noBukti === -1) colMap.noBukti = 2;
+            if (colMap.uraian === -1) colMap.uraian = 3;
+            if (colMap.pengeluaran === -1) colMap.pengeluaran = colMap.penerimaan >= 0 ? colMap.penerimaan + 1 : 5;
+            if (colMap.tanggal === -1) colMap.tanggal = 1;
+        }
+
+        parsedArkasItems = [];
+        var ignoreKeywords = [
+            'terima ppn', 'terima pph', 'setor ppn', 'setor pph', 'pungut ppn', 'pungut pph',
+            'saldo awal', 'bunga bank', 'pajak bunga', 'tarik tunai', 'setor tunai', 'penerimaan transfer',
+            'mutasi kas', 'pindah buku', 'koreksi saldo'
+        ];
+
+        for (var i = headerRowIdx + 1; i < rows.length; i++) {
+            var rData = rows[i];
+            if (!rData || !rData.length) continue;
+
+            var noBukti = String(rData[colMap.noBukti] || '').trim();
+            var uraian = String(rData[colMap.uraian] || '').trim();
+            var tglRaw = rData[colMap.tanggal];
+            var pengeluaranRaw = rData[colMap.pengeluaran];
+
+            if (!uraian && !noBukti) continue;
+
+            var belanja = 0;
+            if (typeof pengeluaranRaw === 'number') {
+                belanja = pengeluaranRaw;
+            } else {
+                var numStr = String(pengeluaranRaw || '').replace(/[^0-9,-]/g, '').replace(',', '.');
+                belanja = parseFloat(numStr) || 0;
+            }
+            if (belanja <= 0) continue;
+
+            var uraianLower = uraian.toLowerCase();
+            var shouldIgnore = false;
+            for (var ig = 0; ig < ignoreKeywords.length; ig++) {
+                if (uraianLower.indexOf(ignoreKeywords[ig]) >= 0) {
+                    shouldIgnore = true;
+                    break;
+                }
+            }
+            if (shouldIgnore) continue;
+
+            var tglStr = '';
+            if (tglRaw instanceof Date) {
+                tglStr = tglRaw.toISOString().slice(0, 10);
+            } else if (typeof tglRaw === 'string') {
+                var matchDate = tglRaw.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/) || tglRaw.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+                if (matchDate) {
+                    if (matchDate[1].length === 4) {
+                        tglStr = matchDate[1] + '-' + ('0' + matchDate[2]).slice(-2) + '-' + ('0' + matchDate[3]).slice(-2);
+                    } else {
+                        tglStr = matchDate[3] + '-' + ('0' + matchDate[2]).slice(-2) + '-' + ('0' + matchDate[1]).slice(-2);
+                    }
+                } else {
+                    tglStr = new Date().toISOString().slice(0, 10);
+                }
+            } else {
+                tglStr = new Date().toISOString().slice(0, 10);
+            }
+
+            var isSiplah = uraianLower.indexOf('siplah') >= 0 || uraianLower.indexOf('blibli') >= 0 || uraianLower.indexOf('pesonaedu') >= 0 || uraianLower.indexOf('intan') >= 0 || uraianLower.indexOf('e-katalog') >= 0;
+
+            var vendorName = 'Rekanan Toko';
+            var vendorMatch = uraian.match(/(?:ke|pada|toko|cv\.?|pt\.?|ud\.?)\s+([A-Za-z0-9\s\.\,\-]+?)(?:\s+(?:untuk|sebesar|guna|tgl|tanggal|\d)|\.|$)/i);
+            if (vendorMatch && vendorMatch[1].trim().length > 2) {
+                vendorName = vendorMatch[1].trim();
+            } else if (isSiplah) {
+                vendorName = 'Mitra SIPLah';
+            }
+
+            // Klasifikasi jenis pajak seragam persis dengan dropdown taxOptions
+            var bppPajak = 'Bebas Pajak / Di Bawah Batas';
+            var rincianPajak = 'Belanja di bawah batasan pungutan pajak';
+            var estimasiPajak = 0;
+
+            if (uraianLower.indexOf('makan') >= 0 || uraianLower.indexOf('minum') >= 0 || uraianLower.indexOf('snack') >= 0 || uraianLower.indexOf('konsumsi') >= 0) {
+                bppPajak = 'PPh Pasal 23';
+                rincianPajak = 'PPh 23 - Jasa Katering / Makanan';
+                estimasiPajak = Math.round(belanja * 0.02);
+            } else if (uraianLower.indexOf('honor') >= 0 || uraianLower.indexOf('narasumber') >= 0 || uraianLower.indexOf('upah') >= 0) {
+                bppPajak = 'PPh Pasal 21';
+                rincianPajak = 'PPh 21 - Tenaga Ahli / Narasumber / Honor';
+                estimasiPajak = Math.round(belanja * 0.05);
+            } else if (uraianLower.indexOf('sewa') >= 0 && (uraianLower.indexOf('gedung') >= 0 || uraianLower.indexOf('ruang') >= 0 || uraianLower.indexOf('tanah') >= 0)) {
+                bppPajak = 'PPh Pasal 4(2)';
+                rincianPajak = 'PPh Final Ps 4(2) - Sewa Tanah/Bangunan';
+                estimasiPajak = Math.round(belanja * 0.10);
+            } else if (uraianLower.indexOf('servis') >= 0 || uraianLower.indexOf('service') >= 0 || uraianLower.indexOf('perbaikan') >= 0 || uraianLower.indexOf('pemeliharaan') >= 0 || uraianLower.indexOf('jasa') >= 0) {
+                bppPajak = 'PPh Pasal 23';
+                rincianPajak = 'PPh 23 - Jasa Perawatan / Pemeliharaan / Perbaikan';
+                estimasiPajak = Math.round(belanja * 0.02);
+            } else {
+                if (isSiplah) {
+                    bppPajak = 'PPN';
+                    rincianPajak = 'PPN - Belanja SIPLah (Dipungut PPMSE Mitra)';
+                    estimasiPajak = Math.round((11 / 111) * belanja);
+                } else if (belanja > 2000000) {
+                    bppPajak = 'PPN';
+                    rincianPajak = 'PPN - Pembelian Barang / Bahan Belanja Modal';
+                    estimasiPajak = Math.round((11 / 111) * belanja);
+                } else {
+                    bppPajak = 'Bebas Pajak / Di Bawah Batas';
+                    rincianPajak = 'Belanja Barang Non-SIPLah <= Rp 2.000.000 (Tidak dipungut PPN)';
+                    estimasiPajak = 0;
+                }
+            }
+
+            var noInvoiceArkas = '';
+            if (isSiplah) {
+                var invMatch = uraian.match(/(?:inv(?:oice)?|pesanan|no\.?\s*inv)\s*[:#\.\-]?\s*([A-Za-z0-9\/\-\.]+)/i);
+                if (invMatch) noInvoiceArkas = invMatch[1].trim();
+            }
+
+            parsedArkasItems.push({
+                selected: true,
+                noArkas: noBukti,
+                noInvoiceSiplah: noInvoiceArkas,
+                bppTanggal: tglStr,
+                uraianKegiatan: uraian,
+                namaPerusahaan: vendorName,
+                nilaiBelanja: belanja,
+                bppJenisPajak: bppPajak,
+                jenisPajakRincian: rincianPajak,
+                nilaiPajakSetor: estimasiPajak,
+                isSiplah: isSiplah,
+                jalurBelanja: isSiplah ? 'SIPLAH' : 'NON_SIPLAH',
+                jenisPengadaan: isSiplah ? 'E-Marketplace / SIPLah' : 'Pengadaan Langsung',
+                sumberDana: 'BOS Reguler'
+            });
+        }
+
+        if (parsedArkasItems.length === 0) {
+            showToast('Tidak ditemukan baris transaksi pengeluaran belanja ber-No Bukti pada file ini.', 'warning');
+            return;
+        }
+
+        renderArkasPreviewTable();
+        $('arkasPreviewContainer').classList.remove('hidden');
+    }
+
+    function renderArkasPreviewTable() {
+        var tbody = $('tbodyArkasPreview');
+        tbody.innerHTML = '';
+        var taxOptions = [
+            'Bebas Pajak / Di Bawah Batas',
+            'PPh Pasal 21',
+            'PPh Pasal 22',
+            'PPh Pasal 23',
+            'PPh Pasal 4(2)',
+            'PPN'
+        ];
+
+        for (var i = 0; i < parsedArkasItems.length; i++) {
+            var it = parsedArkasItems[i];
+            var optHtml = taxOptions.map(function (opt) {
+                return '<option value="' + escapeHtml(opt) + '" ' + (it.bppJenisPajak === opt ? 'selected' : '') + '>' + escapeHtml(opt) + '</option>';
+            }).join('');
+
+            var tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition-colors' + (!it.selected ? ' opacity-50 bg-slate-50/50' : '');
+            tr.innerHTML =
+                '<td class="py-2.5 px-3 text-center"><input type="checkbox" ' + (it.selected ? 'checked' : '') + ' onchange="toggleArkasRow(' + i + ', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"></td>' +
+                '<td class="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">' + escapeHtml(it.noArkas || '-') + '</td>' +
+                '<td class="py-2.5 px-3 text-slate-600 whitespace-nowrap">' + escapeHtml(it.bppTanggal || '-') + '</td>' +
+                '<td class="py-2.5 px-3 max-w-xs"><div class="font-semibold text-slate-900 leading-snug truncate" title="' + escapeHtml(it.uraianKegiatan) + '">' + escapeHtml(it.uraianKegiatan) + '</div><div class="text-[10px] text-slate-500 mt-0.5 font-medium">Toko: ' + escapeHtml(it.namaPerusahaan) + '</div></td>' +
+                '<td class="py-2.5 px-3 text-right font-medium text-slate-800 whitespace-nowrap">Rp ' + formatRibuan(it.nilaiBelanja) + '</td>' +
+                '<td class="py-2.5 px-3"><select onchange="updateArkasItemTax(' + i + ', this.value)" class="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-emerald-500">' + optHtml + '</select></td>' +
+                '<td class="py-2.5 px-3 text-right whitespace-nowrap"><input type="text" value="' + formatRibuan(it.nilaiPajakSetor) + '" oninput="formatRupiahInput(this); updateArkasItemPajakVal(' + i + ', this.value)" class="w-24 px-2 py-1 text-right font-bold text-emerald-800 border border-slate-300 rounded-lg text-xs"></td>' +
+                '<td class="py-2.5 px-3 text-center whitespace-nowrap">' + (it.isSiplah ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold text-[10px]">🛍️ SIPLah</span>' : '<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px]">Toko</span>') + '</td>';
+            tbody.appendChild(tr);
+        }
+
+        updateArkasSummary();
+    }
+
+    function toggleArkasRow(idx, checked) {
+        if (parsedArkasItems[idx]) parsedArkasItems[idx].selected = checked;
+        renderArkasPreviewTable();
+    }
+
+    function toggleArkasCheckAll(masterCb) {
+        for (var i = 0; i < parsedArkasItems.length; i++) {
+            parsedArkasItems[i].selected = masterCb.checked;
+        }
+        renderArkasPreviewTable();
+    }
+
+    /** Menghitung ulang pajak pada tabel pratinjau ARKAS (PPh 22 berbasis DPP 100/111) */
+    function updateArkasItemTax(idx, newTax) {
+        var it = parsedArkasItems[idx];
+        if (!it) return;
+        it.bppJenisPajak = newTax;
+        it.jenisPajakRincian = newTax;
+        if (newTax === 'PPN') {
+            it.nilaiPajakSetor = Math.round((11 / 111) * it.nilaiBelanja);
+        } else if (newTax === 'PPh Pasal 22' || newTax === 'PPh 22') {
+            var dpp22 = Math.round(it.nilaiBelanja * (100 / 111));
+            it.nilaiPajakSetor = Math.round(dpp22 * 0.015);
+        } else if (newTax === 'PPh Pasal 23' || newTax === 'PPh 23') {
+            it.nilaiPajakSetor = Math.round(0.02 * it.nilaiBelanja);
+        } else if (newTax === 'PPh Pasal 21' || newTax === 'PPh 21') {
+            it.nilaiPajakSetor = Math.round(0.05 * it.nilaiBelanja);
+        } else if (newTax === 'PPh Pasal 4(2)' || newTax.indexOf('4') >= 0) {
+            it.nilaiPajakSetor = Math.round(0.10 * it.nilaiBelanja);
+        } else {
+            it.nilaiPajakSetor = 0;
+        }
+        renderArkasPreviewTable();
+    }
+
+    function updateArkasItemPajakVal(idx, valStr) {
+        var it = parsedArkasItems[idx];
+        if (!it) return;
+        it.nilaiPajakSetor = parseFloat(String(valStr).replace(/[^0-9]/g, '')) || 0;
+        updateArkasSummary();
+    }
+
+    function updateArkasSummary() {
+        var selected = parsedArkasItems.filter(function (x) { return x.selected; });
+        var totalBelanja = selected.reduce(function (acc, x) { return acc + (x.nilaiBelanja || 0); }, 0);
+        var totalPajak = selected.reduce(function (acc, x) { return acc + (x.nilaiPajakSetor || 0); }, 0);
+
+        $('arkasSummaryText').textContent = parsedArkasItems.length + ' transaksi belanja terdeteksi (Total Belanja: Rp ' + formatRibuan(totalBelanja) + ' | Estimasi Pajak: Rp ' + formatRibuan(totalPajak) + ')';
+        $('arkasSelectedCount').textContent = selected.length;
+        var btn = $('btnSubmitArkasBatch');
+        btn.disabled = selected.length === 0;
+        btn.innerHTML = '<span>🚀 Simpan ' + selected.length + ' Transaksi ke SAJAK</span>';
+    }
+
+    function submitBatchArkas() {
+        var selected = parsedArkasItems.filter(function (x) { return x.selected; });
+        if (selected.length === 0) {
+            showToast('Pilih minimal 1 transaksi yang akan disimpan.', 'warning');
+            return;
+        }
+
+        var npsn = (sessionData && sessionData.operator) ? String(sessionData.operator.npsn) : '';
+        var pf = (sessionData && sessionData.operator && sessionData.operator.profil)
+            ? sessionData.operator.profil
+            : ((sessionData && sessionData.operator && sessionData.operator.prefill) || {});
+
+        var itemsToSend = selected.map(function (it) {
+            return {
+                npsn: npsn,
+                namaSekolah: pf.namaSekolah || (sessionData && sessionData.operator && sessionData.operator.namaOperator) || '',
+                subUnitCoretax: pf.subUnitCoretax || '',
+                kabKota: pf.kabKota || '',
+                cabangDinas: pf.cabangDinas || '',
+                uraianKegiatan: it.uraianKegiatan,
+                jenisPengadaan: it.jenisPengadaan || 'Pengadaan Langsung',
+                namaPerusahaan: it.namaPerusahaan || 'Rekanan Toko',
+                alamatPerusahaan: pf.kabKota || '',
+                npwpPerusahaan: '',
+                bppTanggal: it.bppTanggal,
+                bppJenisPajak: it.bppJenisPajak,
+                nilaiBelanja: Number(it.nilaiBelanja || 0),
+                nilaiPajakSetor: Number(it.nilaiPajakSetor || 0),
+                jenisPajakRincian: it.jenisPajakRincian,
+                tanggalBilling: it.isSiplah ? it.bppTanggal : '',
+                noBilling: it.isSiplah ? (it.noInvoiceSiplah ? ('SIPLah: ' + it.noInvoiceSiplah) : 'SIPLah') : '',
+                noFaktur: it.isSiplah ? '-' : '',
+                noBupot: it.isSiplah ? '-' : '',
+                ntpn: it.isSiplah ? 'SIPLAH' : '',
+                tanggalSetor: it.isSiplah ? it.bppTanggal : '',
+                sumberDana: it.sumberDana || 'BOS Reguler',
+                ket: 'Import Cepat BKU ARKAS: ' + (it.noArkas || '-'),
+                noArkas: it.noArkas || '',
+                noInvoiceSiplah: it.noInvoiceSiplah || '',
+                jalurBelanja: it.jalurBelanja || 'NON_SIPLAH',
+                linkBukti: ''
+            };
+        });
+
+        var btn = $('btnSubmitArkasBatch');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Menyimpan ' + itemsToSend.length + ' Data...';
+
+        callGasServer_('simpanBatchDataRekap', [itemsToSend, String(sessionData.sessionToken)], function (res) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>🚀 Simpan ke Database SAJAK</span>';
+            if (!res || res.status !== 'success') {
+                showToast('Gagal menyimpan: ' + (res && res.message ? res.message : 'Kesalahan tidak diketahui'), 'error');
+                return;
+            }
+            closeImportArkasModal();
+            historyCache = {};
+            loadRiwayatServer(1, true);
+            var savedCnt = res.savedCount !== undefined ? res.savedCount : (res.count !== undefined ? res.count : itemsToSend.length);
+            showSimpleModal('Import BKU Berhasil!', 'Sebanyak ' + savedCnt + ' transaksi belanja dari ARKAS berhasil disimpan ke database SAJAK secara massal.');
+        }, function (ex) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>🚀 Simpan ke Database SAJAK</span>';
+            showToast('Terjadi kesalahan koneksi server: ' + (ex && ex.message ? ex.message : String(ex)), 'error');
+        });
+    }
+
+    /* ===================== MODAL DETAIL RINGKASAN PROFIL SEKOLAH ===================== */
+
+    function openSchoolDetailModal(data) {
+        if (!data) return;
+
+        $('dtlSchoolName').textContent = data.namaSekolah || '-';
+        $('dtlSchoolSub').textContent = (data.npsn ? 'NPSN: ' + data.npsn : 'Kode: -') + ' • ' + (data.cabangDinas || 'Cabang Dinas');
+
+        var isProfOk = data.isProfileComplete || data.hasProfil || data.status === 'LENGKAP' || data.statusProfil === 'Sudah Lengkap';
+        $('dtlBadgeProfil').className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ' +
+            (isProfOk ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200');
+        $('dtlBadgeProfil').innerHTML = isProfOk ? '<span>✓</span><span>Profil Lengkap</span>' : '<span>✗</span><span>Profil Belum Lengkap</span>';
+
+        var statKep = data.statusKepatuhan || (data.statusCode === 'MEMENUHI_SYARAT' ? 'Memenuhi Syarat' : (data.transaksiBelumNtpn > 0 ? 'Transaksi Belum Lengkap' : (isProfOk && data.totalTransaksi > 0 ? 'Memenuhi Syarat' : 'Belum Ada Transaksi')));
+        var isKepOk = statKep === 'Memenuhi Syarat' || data.statusCode === 'MEMENUHI_SYARAT';
+        $('dtlBadgePajak').className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ' +
+            (isKepOk ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-300');
+        $('dtlBadgePajak').innerHTML = (isKepOk ? '<span>✅</span>' : '<span>⚠️</span>') + '<span>' + escapeHtml(statKep) + '</span>';
+
+        $('dtlBadgeLogin').innerHTML = data.pernahLogin ? '<span>🔑</span><span>Pernah Login</span>' : '<span>⭕</span><span>Belum Pernah Login</span>';
+
+        $('dtlNitku').textContent = data.subUnitCoretax || data.coretax || '-';
+        $('dtlCabdin').textContent = data.cabangDinas || '-';
+        $('dtlKabKota').textContent = data.kabKota || '-';
+        var kecKel = [data.kecamatan, data.kelurahan].filter(Boolean).join(', ');
+        $('dtlKecKel').textContent = kecKel || '-';
+        $('dtlAlamat').textContent = data.alamatSekolah || data.alamat || '-';
+
+        var isUnitEnt = data.jenis === 'UNIT_DINAS';
+        $('dtlKasekTitle').textContent = isUnitEnt ? 'Kuasa Pengguna Anggaran (KPA)' : 'Kepala Sekolah (KPA)';
+        $('dtlNamaKasek').textContent = data.namaKasek || data.pejabat1 || '-';
+        $('dtlNikKasek').textContent = data.nikKasek || data.pejabat1Id || '-';
+        $('dtlNipKasek').textContent = data.nipKpa || '-';
+        $('dtlPangkatKasek').textContent = data.pangkatKpa || '-';
+
+        $('dtlBendaharaTitle').textContent = isUnitEnt ? 'Bendahara Pengeluaran Pembantu (BPP)' : 'Bendahara Sekolah (BPP)';
+        $('dtlNamaBendahara').textContent = data.namaBendahara || data.pejabat2 || '-';
+        $('dtlNikBendahara').textContent = data.nikBendahara || data.pejabat2Id || '-';
+        $('dtlNipBendahara').textContent = data.nipBpp || '-';
+        $('dtlPangkatBendahara').textContent = data.pangkatBpp || '-';
+
+        $('dtlTotalBelanja').textContent = 'Rp ' + formatRibuan(data.totalBelanja || data.belanja || 0);
+        $('dtlTotalPajak').textContent = 'Rp ' + formatRibuan(data.totalPajak || data.totalNominal || 0);
+        $('dtlPajakNtpn').textContent = 'Rp ' + formatRibuan(data.pajakLengkapNtpn || data.nominalNtpn || data.nominalDenganNtpn || 0);
+        $('dtlPajakBelum').textContent = 'Rp ' + formatRibuan(data.pajakBelumNtpn || data.nominalBelumNtpn || 0);
+
+        if (data.npsn && (!data.alamatSekolah || !data.nipKpa) && sessionData && sessionData.sessionToken) {
+            callGasServer_('getProfilSekolahByNpsn', [String(data.npsn), String(sessionData.sessionToken)], function (pRes) {
+                if (pRes && pRes.status === 'success' && pRes.profil) {
+                    var pf = pRes.profil;
+                    if (pf.alamatSekolah) $('dtlAlamat').textContent = pf.alamatSekolah;
+                    var kk = [pf.kecamatan, pf.kelurahan].filter(Boolean).join(', ');
+                    if (kk) $('dtlKecKel').textContent = kk;
+                    if (pf.subUnitCoretax && $('dtlNitku').textContent === '-') $('dtlNitku').textContent = pf.subUnitCoretax;
+                    if (pf.namaKasek && $('dtlNamaKasek').textContent === '-') $('dtlNamaKasek').textContent = pf.namaKasek;
+                    if (pf.nikKasek && $('dtlNikKasek').textContent === '-') $('dtlNikKasek').textContent = pf.nikKasek;
+                    if (pf.nipKpa) $('dtlNipKasek').textContent = pf.nipKpa;
+                    if (pf.pangkatKpa) $('dtlPangkatKasek').textContent = pf.pangkatKpa;
+                    if (pf.namaBendahara && $('dtlNamaBendahara').textContent === '-') $('dtlNamaBendahara').textContent = pf.namaBendahara;
+                    if (pf.nikBendahara && $('dtlNikBendahara').textContent === '-') $('dtlNikBendahara').textContent = pf.nikBendahara;
+                    if (pf.nipBpp) $('dtlNipBendahara').textContent = pf.nipBpp;
+                    if (pf.pangkatBpp) $('dtlPangkatBendahara').textContent = pf.pangkatBpp;
+                }
+            }, function () { });
+        }
+
+        $('modalSchoolDetail').classList.remove('hidden');
+    }
+
+    function openSchoolDetailModalByIndex(idx, source) {
+        var data;
+        if (source === 'cabdis') {
+            data = (cabdisFilteredSchools && cabdisFilteredSchools[idx]) ? cabdisFilteredSchools[idx] : cabdisSchoolsList[idx];
+        } else {
+            data = (currentAdminSchoolsList && currentAdminSchoolsList[idx]) ? currentAdminSchoolsList[idx] : null;
+        }
+        if (data) openSchoolDetailModal(data);
+    }
+
+    function closeSchoolDetailModal() {
+        $('modalSchoolDetail').classList.add('hidden');
+    }
+</script>

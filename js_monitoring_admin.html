@@ -1,0 +1,1545 @@
+<script>
+    /**
+     * ============================================================================
+     * SAJAK (Sistem Rekapitulasi Pajak) - Modul Monitoring Cabdis & Admin
+     * File: js_monitoring_admin.html
+     * Berisi: Dashboard Pengawasan Sekolah Binaan Cabang Dinas (I s/d XIV),
+     * Ringkasan Admin, Rekap Transaksi (In-Memory Cache + Filter Instan),
+     * Radar Kepatuhan, Manajemen Akun, Paket Rekonsiliasi BPK, Arsip Tahun
+     * Anggaran, dan Inisialisasi Awal Halaman.
+     * ============================================================================
+     */
+
+    /* ===================== 2A: DASHBOARD MONITORING CABANG DINAS ===================== */
+
+    /** Memuat data pengawasan sekolah binaan Cabang Dinas secara real-time */
+    function loadCabdisSchoolMonitoring(forceRefresh) {
+        if (!sessionData || !sessionData.sessionToken) return;
+
+        // Bersihkan tampilan lama segera agar tidak ada data akun sebelumnya yang tersisa
+        cabdisSchoolsList = [];
+        cabdisFilteredSchools = [];
+        var currentName = (sessionData && sessionData.operator && sessionData.operator.namaOperator)
+            ? sessionData.operator.namaOperator
+            : 'Cabang Dinas';
+
+        if ($('cabdisMonitoringTitle')) $('cabdisMonitoringTitle').textContent = 'Pengawasan Sekolah Binaan ' + currentName;
+        if ($('cabdisMonitoringSubtitle')) $('cabdisMonitoringSubtitle').textContent = 'Sedang menyinkronkan data sekolah wilayah binaan dari database...';
+        if ($('cabMetricSubWilayah')) $('cabMetricSubWilayah').textContent = currentName;
+        if ($('cabMetricTotalSekolah')) $('cabMetricTotalSekolah').textContent = '... Sekolah';
+        if ($('cabMetricProfilLengkap')) $('cabMetricProfilLengkap').textContent = '...';
+        if ($('cabMetricLoginAktif')) $('cabMetricLoginAktif').textContent = '...';
+        if ($('cabMetricTotalBelanja')) $('cabMetricTotalBelanja').textContent = 'Rp ...';
+        if ($('cabMetricTotalTx')) $('cabMetricTotalTx').textContent = '...';
+        if ($('cabMetricPajakLengkap')) $('cabMetricPajakLengkap').textContent = 'Rp ...';
+        if ($('cabMetricPajakBelum')) $('cabMetricPajakBelum').textContent = 'Rp ...';
+        if ($('pageInfoCabdis')) $('pageInfoCabdis').textContent = 'Menghubungkan ke server...';
+
+        if ($('tbodyCabdisMonitoring')) {
+            $('tbodyCabdisMonitoring').innerHTML =
+                '<tr><td colspan="7" class="py-16 text-center text-slate-500 font-medium">' +
+                '<div class="flex flex-col items-center justify-center gap-3">' +
+                '<div class="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>' +
+                '<span class="font-semibold text-slate-700 text-sm">Menyiapkan daftar sekolah ' + escapeHtml(currentName) + '...</span>' +
+                '<span class="text-xs text-slate-400">Menghubungkan ke database SAJAK</span>' +
+                '</div></td></tr>';
+        }
+
+        var loading = $('cabdisLoading');
+        if (loading) loading.classList.remove('hidden');
+
+        callGasServer_('getCabdisSchoolMonitoring', [String(sessionData.sessionToken)], function (res) {
+            if (loading) loading.classList.add('hidden');
+            if (!res || res.status !== 'success') {
+                var errMsg = res && res.message ? res.message : 'Gagal memuat data pengawasan.';
+                showToast('Gagal memuat monitoring sekolah: ' + errMsg, 'error');
+                if ($('tbodyCabdisMonitoring')) {
+                    $('tbodyCabdisMonitoring').innerHTML =
+                        '<tr><td colspan="7" class="py-8 text-center text-rose-500 font-medium">Gagal memuat data: ' +
+                        escapeHtml(errMsg) + '</td></tr>';
+                }
+                return;
+            }
+
+            cabdisSchoolsList = res.schools || [];
+            var cabLabel = res.cabdisName || currentName;
+            var wilayahList = Array.isArray(res.wilayahBinaan) ? res.wilayahBinaan : [];
+            var wilayahText = wilayahList.length > 0 ? wilayahList.join(', ') : '';
+
+            if ($('cabdisMonitoringTitle')) {
+                $('cabdisMonitoringTitle').textContent = 'Pengawasan Sekolah Binaan ' + cabLabel;
+            }
+            if ($('cabdisMonitoringSubtitle')) {
+                $('cabdisMonitoringSubtitle').textContent = wilayahText
+                    ? 'Cakupan Wilayah Binaan: ' + wilayahText + ' • Terintegrasi Master NPSN, Coretax, & Rekap Pajak'
+                    : 'Terintegrasi Real-time dengan Master NPSN, Profil Coretax, dan Rekap Pajak';
+            }
+            if ($('cabMetricSubWilayah')) {
+                $('cabMetricSubWilayah').textContent = wilayahText || cabLabel;
+            }
+
+            var m = res.metrics || {};
+            var totalSek = Number(m.totalSekolah || 0);
+            var aktifLogin = m.aktifLogin !== undefined ? Number(m.aktifLogin) : Math.max(0, totalSek - Number(m.belumLogin || 0));
+
+            if ($('badgeCabdisMonitoring')) {
+                $('badgeCabdisMonitoring').textContent = totalSek;
+                $('badgeCabdisMonitoring').classList.toggle('hidden', totalSek <= 0);
+            }
+
+            $('cabMetricTotalSekolah').textContent = totalSek + ' Sekolah';
+            $('cabMetricProfilLengkap').textContent = (m.profilLengkap || 0) + ' / ' + totalSek;
+            $('cabMetricLoginAktif').textContent = aktifLogin + ' aktif login';
+            $('cabMetricTotalBelanja').textContent = 'Rp ' + formatRibuan(m.totalBelanja || 0);
+            $('cabMetricTotalTx').textContent = (m.totalTransaksi || 0) + ' transaksi belanja';
+            $('cabMetricPajakLengkap').textContent = 'Rp ' + formatRibuan(m.pajakLengkapNtpn || m.nominalNtpn || 0);
+            $('cabMetricPajakBelum').textContent = 'Rp ' + formatRibuan(m.pajakBelumNtpn || m.belumNtpn || 0) + ' (' + (m.transaksiBelumNtpn || 0) + ' blm NTPN)';
+
+            filterCabdisSchoolsTable();
+            if (forceRefresh) {
+                showToast('Data monitoring ' + cabLabel + ' berhasil disegarkan (' + totalSek + ' sekolah).', 'success');
+            }
+        }, function (err) {
+            if (loading) loading.classList.add('hidden');
+            var errTxt = err && err.message ? err.message : String(err);
+            showToast('Gagal menghubungi server Cabdis: ' + errTxt, 'error');
+            if ($('tbodyCabdisMonitoring')) {
+                $('tbodyCabdisMonitoring').innerHTML =
+                    '<tr><td colspan="7" class="py-8 text-center text-rose-500 font-medium">Koneksi gagal: ' +
+                    escapeHtml(errTxt) + '</td></tr>';
+            }
+        });
+    }
+
+    /** Menyaring tabel pengawasan sekolah binaan Cabang Dinas secara instan di browser */
+    function filterCabdisSchoolsTable() {
+        var q = $('filterSearchCabdis') ? String($('filterSearchCabdis').value || '').toLowerCase().trim() : '';
+        var statusFilter = $('filterStatusCabdis') ? String($('filterStatusCabdis').value || '') : '';
+
+        var filtered = cabdisSchoolsList.filter(function (s) {
+            if (q) {
+                var str = ((s.npsn || '') + ' ' + (s.namaSekolah || '') + ' ' + (s.kabKota || '') + ' ' + (s.subUnitCoretax || '')).toLowerCase();
+                if (str.indexOf(q) < 0) return false;
+            }
+            if ((statusFilter === 'MEMENUHI_SYARAT' || statusFilter === 'TERTIB') && s.statusCode !== 'MEMENUHI_SYARAT') return false;
+            if ((statusFilter === 'TRANSAKSI_BELUM_LENGKAP' || statusFilter === 'PERLU_NTPN') && s.statusCode !== 'TRANSAKSI_BELUM_LENGKAP') return false;
+            if ((statusFilter === 'BELUM_ADA_TRANSAKSI' || statusFilter === 'BELUM_TRANSAKSI') && s.statusCode !== 'BELUM_ADA_TRANSAKSI') return false;
+            if (statusFilter === 'BELUM_MEMENUHI_SYARAT' && s.statusCode !== 'BELUM_MEMENUHI_SYARAT') return false;
+            if (statusFilter === 'PROFIL_SUDAH_LENGKAP' && !s.isProfileComplete) return false;
+            if ((statusFilter === 'PROFIL_BELUM_LENGKAP' || statusFilter === 'BELUM_PROFIL') && s.isProfileComplete) return false;
+            return true;
+        });
+
+        cabdisFilteredSchools = filtered;
+        renderCabdisSchoolsTable(filtered);
+    }
+
+    /** Merender baris tabel sekolah binaan Cabdis */
+    function renderCabdisSchoolsTable(schools) {
+        var tbody = $('tbodyCabdisMonitoring');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!schools || schools.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-400 text-xs">Tidak ada data sekolah binaan yang cocok dengan filter.</td></tr>';
+            if ($('pageInfoCabdis')) $('pageInfoCabdis').textContent = 'Menampilkan 0 sekolah';
+            return;
+        }
+
+        for (var i = 0; i < schools.length; i++) {
+            var sc = schools[i];
+
+            var profHtml = '';
+            if (sc.isProfileComplete || sc.statusProfil === 'Sudah Lengkap') {
+                profHtml =
+                    '<div class="inline-flex items-center gap-1 font-semibold text-emerald-700 text-xs bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">' +
+                    '<span>✓ Sudah Lengkap</span></div>' +
+                    '<div class="text-[11px] text-slate-600 font-mono mt-1" title="Nomor Sub Unit Coretax / NITKU 22 Digit">' +
+                    'NITKU: <strong>' + escapeHtml(sc.subUnitCoretax || '-') + '</strong></div>';
+            } else {
+                var missing = [];
+                if (!sc.nitkuOk) missing.push('NITKU belum ada');
+                if (!sc.kasekOk || !sc.bendaharaOk) missing.push('Kasek/Bendahara belum lengkap');
+                var missingText = missing.length ? missing.join(' • ') : 'Profil belum disimpan';
+
+                profHtml =
+                    '<div class="inline-flex items-center gap-1 font-semibold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded border border-rose-200">' +
+                    '<span>✗ Belum Lengkap</span></div>' +
+                    '<div class="text-[10px] text-slate-500 font-mono mt-1">' +
+                    (sc.subUnitCoretax ? 'NITKU: ' + escapeHtml(sc.subUnitCoretax) : '<span class="italic text-rose-500">NITKU belum diisi</span>') +
+                    '</div>' +
+                    '<div class="text-[10px] text-amber-700 mt-0.5 font-medium leading-tight">' + escapeHtml(missingText) + '</div>';
+            }
+
+            var statusCell = '';
+            if (sc.statusCode === 'MEMENUHI_SYARAT' || sc.statusKepatuhan === 'Memenuhi Syarat') {
+                statusCell =
+                    '<div class="inline-flex items-center px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full font-bold text-xs shadow-2xs">✅ Memenuhi Syarat</div>' +
+                    '<div class="text-[10px] text-emerald-700 font-medium mt-1">Pajak tertib ber-NTPN</div>';
+            } else if (sc.statusCode === 'TRANSAKSI_BELUM_LENGKAP' || sc.statusKepatuhan === 'Transaksi Belum Lengkap') {
+                statusCell =
+                    '<div class="inline-flex items-center px-2.5 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-full font-bold text-xs shadow-2xs">⚠️ Transaksi Belum Lengkap</div>' +
+                    '<div class="text-[11px] font-bold text-rose-700 mt-1" title="Pajak yang belum ber-NTPN">' +
+                    'Belum NTPN: Rp ' + formatRibuan(sc.pajakBelumNtpn || sc.nominalBelumNtpn || 0) + ' (' + (sc.transaksiBelumNtpn || 0) + ' Tx)</div>';
+            } else if (sc.statusCode === 'BELUM_ADA_TRANSAKSI' || sc.statusKepatuhan === 'Belum Ada Transaksi') {
+                statusCell =
+                    '<div class="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded-full font-bold text-xs">⭕ Belum Ada Transaksi</div>' +
+                    '<div class="text-[10px] text-slate-500 mt-1">Profil ada, belum ada belanja</div>';
+            } else {
+                statusCell =
+                    '<div class="inline-flex items-center px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-200 rounded-full font-bold text-xs">❌ Belum Memenuhi Syarat</div>' +
+                    '<div class="text-[10px] text-rose-600 mt-1">Profil &amp; transaksi belum ada</div>';
+            }
+
+            var tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100';
+            tr.innerHTML =
+                '<td class="py-3 px-3 font-semibold text-slate-700 text-center">' + (i + 1) + '</td>' +
+                '<td class="py-3 px-3">' +
+                '<button type="button" onclick="openSchoolDetailModalByIndex(' + i + ', \'cabdis\')" class="text-left group cursor-pointer focus:outline-none w-full block">' +
+                '<div class="font-bold text-emerald-800 group-hover:text-emerald-600 group-hover:underline leading-snug flex items-center gap-1.5">' +
+                '<span>' + escapeHtml(sc.namaSekolah) + '</span>' +
+                '<span class="text-xs text-emerald-600 opacity-60 group-hover:opacity-100 transition-opacity" title="Klik untuk melihat profil lengkap">ℹ️</span>' +
+                '</div>' +
+                '<div class="text-[11px] text-slate-500 font-mono mt-0.5">NPSN: ' + escapeHtml(sc.npsn || '-') + '</div>' +
+                '</button></td>' +
+                '<td class="py-3 px-3 text-xs text-slate-600">' + escapeHtml(sc.kabKota || '-') + '</td>' +
+                '<td class="py-3 px-3">' + profHtml + '</td>' +
+                '<td class="py-3 px-3 text-right font-medium text-slate-800"><div>Rp ' + formatRibuan(sc.totalBelanja || 0) + '</div><div class="text-[10px] text-slate-500">' + (sc.totalTransaksi || 0) + ' Transaksi</div></td>' +
+                '<td class="py-3 px-3 text-right font-bold text-emerald-800">Rp ' + formatRibuan(sc.pajakLengkapNtpn || sc.nominalNtpn || 0) + '</td>' +
+                '<td class="py-3 px-3 text-center">' + statusCell + '</td>';
+            tbody.appendChild(tr);
+        }
+
+        if ($('pageInfoCabdis')) {
+            $('pageInfoCabdis').textContent = 'Menampilkan ' + schools.length + ' dari ' + cabdisSchoolsList.length + ' sekolah binaan';
+        }
+    }
+
+    /** Mengekspor data monitoring sekolah binaan Cabdis ke Excel (.xls) dengan penutup komentar XML yang valid */
+    function exportCabdisMonitoringExcel() {
+        var sourceList = (cabdisFilteredSchools && cabdisFilteredSchools.length > 0) ? cabdisFilteredSchools : cabdisSchoolsList;
+        if (!sourceList || !sourceList.length) {
+            showToast('Belum ada data sekolah binaan untuk diunduh.', 'warning');
+            return;
+        }
+
+        var cabName = $('cabdisMonitoringTitle').textContent.replace('Pengawasan Sekolah Binaan ', '').trim() || 'CABDIS';
+        var dateStr = new Date().toISOString().slice(0, 10);
+
+        var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
+            '<head><meta charset="utf-8">' +
+            '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Monitoring Sekolah</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+            '<style>' +
+            'table{border-collapse:collapse;font-family:Calibri,sans-serif;font-size:11pt;}' +
+            'th{background-color:#047857;color:#ffffff;font-weight:bold;text-align:center;border:1px solid #065f46;padding:8px;}' +
+            'td{border:1px solid #cbd5e1;padding:6px;vertical-align:middle;}' +
+            '.text-col{mso-number-format:"\\@";}' +
+            '.num-col{mso-number-format:"\\#\\,\\#\\#0";text-align:right;}' +
+            '</style></head><body>' +
+            '<h2>LAPORAN PENGAWASAN KEPATUHAN PAJAK SEKOLAH BINAAN</h2>' +
+            '<p><strong>Cabang Dinas:</strong> ' + escapeHtml(cabName) + ' | <strong>Jumlah Sekolah:</strong> ' + sourceList.length + ' | <strong>Tanggal Unduh:</strong> ' + dateStr + '</p>' +
+            '<table border="1"><thead><tr>' +
+            '<th>No</th><th>NPSN</th><th>Nama Satuan Pendidikan</th><th>Kabupaten / Kota</th><th>Status Profil &amp; NITKU</th><th>Nomor NITKU Coretax</th><th>Total Transaksi</th><th>Total Belanja (Rp)</th><th>Pajak Ber-NTPN (Rp)</th><th>Status Kepatuhan</th>' +
+            '</tr></thead><tbody>';
+
+        for (var i = 0; i < sourceList.length; i++) {
+            var s = sourceList[i];
+            var statusLabel = s.statusKepatuhan || '';
+            if (s.statusCode === 'TRANSAKSI_BELUM_LENGKAP') {
+                statusLabel += ' (Belum NTPN: Rp ' + formatRibuan(s.pajakBelumNtpn || s.nominalBelumNtpn || 0) + ' [' + (s.transaksiBelumNtpn || 0) + ' Tx])';
+            }
+
+            html += '<tr>' +
+                '<td style="text-align:center;">' + (i + 1) + '</td>' +
+                '<td class="text-col">' + escapeHtml(s.npsn || '-') + '</td>' +
+                '<td>' + escapeHtml(s.namaSekolah || '-') + '</td>' +
+                '<td>' + escapeHtml(s.kabKota || '') + '</td>' +
+                '<td>' + escapeHtml(s.statusProfil || (s.isProfileComplete ? 'Sudah Lengkap' : 'Belum Lengkap')) + '</td>' +
+                '<td class="text-col">' + escapeHtml(s.subUnitCoretax || '-') + '</td>' +
+                '<td class="num-col">' + Number(s.totalTransaksi || 0) + '</td>' +
+                '<td class="num-col">' + Number(s.totalBelanja || 0) + '</td>' +
+                '<td class="num-col">' + Number(s.pajakLengkapNtpn || s.nominalNtpn || 0) + '</td>' +
+                '<td>' + escapeHtml(statusLabel) + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table></body></html>';
+
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'MONITORING_SEKOLAH_' + cabName.replace(/[^A-Za-z0-9]/g, '_') + '_' + dateStr + '.xls';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2500);
+        showToast('Berhasil mengunduh laporan ' + sourceList.length + ' sekolah binaan.', 'success');
+    }
+
+    /* ===================== PORTAL ADMIN: RINGKASAN & NAVIGASI ===================== */
+
+    /** Peta Resmi 14 Cabang Dinas ke Kabupaten/Kota Binaan untuk Smart Cascading Filter */
+    var CABDIS_KABKOTA_MAP = {
+        1: ['Kota Medan', 'Kab. Deli Serdang'],
+        2: ['Kota Binjai', 'Kab. Langkat'],
+        3: ['Kota Tebing Tinggi', 'Kab. Serdang Bedagai'],
+        4: ['Kab. Karo', 'Kab. Dairi', 'Kab. Pakpak Bharat'],
+        5: ['Kota Tanjungbalai', 'Kab. Asahan', 'Kab. Batu Bara'],
+        6: ['Kota Pematangsiantar', 'Kab. Simalungun'],
+        7: ['Kab. Labuhanbatu', 'Kab. Labuhanbatu Utara', 'Kab. Labuhanbatu Selatan'],
+        8: ['Kab. Toba', 'Kab. Samosir'],
+        9: ['Kab. Humbang Hasundutan', 'Kab. Tapanuli Utara'],
+        10: ['Kota Sibolga', 'Kab. Tapanuli Tengah'],
+        11: ['Kota Padangsidimpuan', 'Kab. Tapanuli Selatan', 'Kab. Mandailing Natal'],
+        12: ['Kab. Padang Lawas', 'Kab. Padang Lawas Utara'],
+        13: ['Kota Gunungsitoli', 'Kab. Nias', 'Kab. Nias Utara'],
+        14: ['Kab. Nias Selatan', 'Kab. Nias Barat']
+    };
+
+    var DEFAULT_OFFICIAL_CABDIS = [
+        'Cabang Dinas Wilayah I', 'Cabang Dinas Wilayah II', 'Cabang Dinas Wilayah III', 'Cabang Dinas Wilayah IV',
+        'Cabang Dinas Wilayah V', 'Cabang Dinas Wilayah VI', 'Cabang Dinas Wilayah VII', 'Cabang Dinas Wilayah VIII',
+        'Cabang Dinas Wilayah IX', 'Cabang Dinas Wilayah X', 'Cabang Dinas Wilayah XI', 'Cabang Dinas Wilayah XII',
+        'Cabang Dinas Wilayah XIII', 'Cabang Dinas Wilayah XIV'
+    ];
+
+    var allMasterCabdinList = [];
+    var allMasterKabKotaList = [];
+
+    /** Helper Smart Cascading: Menyesuaikan dropdown Kabupaten/Kota berdasarkan Cabang Dinas yang dipilih */
+    function updateSmartKabKotaFilter(cabdinValue, kabKotaSelectId, currentKabKotaVal) {
+        var kabSelect = $(kabKotaSelectId);
+        if (!kabSelect) return;
+
+        var prevVal = currentKabKotaVal !== undefined ? currentKabKotaVal : kabSelect.value;
+        var cabNum = 0;
+        if (cabdinValue) {
+            var m = String(cabdinValue).match(/(?:WILAYAH|CABDIS|CABDIN|WIL|CD)?\s*0*(\d{1,2})\b/i);
+            if (m) {
+                cabNum = Number(m[1]);
+            } else {
+                var roms = [['XIV', 14], ['XIII', 13], ['XII', 12], ['XI', 11], ['X', 10], ['IX', 9], ['VIII', 8], ['VII', 7], ['VI', 6], ['IV', 4], ['V', 5], ['III', 3], ['II', 2], ['I', 1]];
+                for (var r = 0; r < roms.length; r++) {
+                    if (new RegExp('\\b' + roms[r][0] + '\\b', 'i').test(cabdinValue)) {
+                        cabNum = roms[r][1];
+                        break;
+                    }
+                }
+            }
+        }
+
+        var targetList = [];
+        if (cabNum >= 1 && cabNum <= 14 && CABDIS_KABKOTA_MAP[cabNum]) {
+            targetList = CABDIS_KABKOTA_MAP[cabNum];
+        } else {
+            targetList = allMasterKabKotaList;
+        }
+
+        fillDropdown(kabKotaSelectId, targetList, 'Semua Kabupaten/Kota');
+
+        // Pertahankan nilai sebelumnya jika masih relevan dalam daftar baru
+        if (prevVal) {
+            var normPrev = String(prevVal).toUpperCase().replace(/[^A-Z0-9]/g, '');
+            for (var i = 0; i < targetList.length; i++) {
+                var normTarget = String(targetList[i]).toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (normTarget === normPrev || normTarget.indexOf(normPrev) !== -1 || normPrev.indexOf(normTarget) !== -1) {
+                    kabSelect.value = targetList[i];
+                    break;
+                }
+            }
+        }
+    }
+
+    /** Handler saat Cabang Dinas di Rekap Transaksi berubah */
+    function onAdminTxCabdinChange() {
+        var cabVal = $('adminTxCabdin') ? $('adminTxCabdin').value : '';
+        updateSmartKabKotaFilter(cabVal, 'adminTxKabKota');
+        applyAdminTxFilters(true);
+    }
+
+    /** Handler saat Cabang Dinas di Radar Kepatuhan berubah */
+    function onAdminSchoolCabdinChange() {
+        var cabVal = $('adminSchoolCabdin') ? $('adminSchoolCabdin').value : '';
+        updateSmartKabKotaFilter(cabVal, 'adminSchoolKabKota');
+        loadAdminSchools(true);
+    }
+
+    var adminSchoolSearchTimer = null;
+    function handleAdminSchoolSearchKeyup(e) {
+        if (adminSchoolSearchTimer) clearTimeout(adminSchoolSearchTimer);
+        adminSchoolSearchTimer = setTimeout(function () {
+            loadAdminSchools(true);
+        }, 350);
+    }
+
+    function populateAdminFilters(master) {
+        master = master || {};
+        allMasterKabKotaList = master.kabKota || [];
+        allMasterCabdinList = (master.cabdin && master.cabdin.length >= 14) ? master.cabdin : DEFAULT_OFFICIAL_CABDIS;
+        fillDropdown('overviewCabdin', allMasterCabdinList, 'Semua Cabang Dinas');
+        fillDropdown('adminTxCabdin', allMasterCabdinList, 'Semua Cabang Dinas');
+        fillDropdown('adminTxKabKota', allMasterKabKotaList, 'Semua Kabupaten/Kota');
+        fillDropdown('adminTxBpp', master.bppPajak, 'Semua Jenis Pajak');
+        fillDropdown('adminTxDana', master.sumberDana, 'Semua Sumber Dana');
+        fillDropdown('adminSchoolCabdin', allMasterCabdinList, 'Semua Cabang Dinas');
+        fillDropdown('adminSchoolKabKota', allMasterKabKotaList, 'Semua Kabupaten/Kota');
+    }
+
+    function switchAdminTab(tabName) {
+        var tabs = ['overview', 'transactions', 'schools', 'accounts'];
+        for (var i = 0; i < tabs.length; i++) {
+            var active = tabs[i] === tabName;
+            var cap = tabs[i].charAt(0).toUpperCase() + tabs[i].slice(1);
+            if ($('adminTab' + cap)) $('adminTab' + cap).classList.toggle('hidden', !active);
+            if ($('adminNav' + cap)) {
+                $('adminNav' + cap).className = active
+                    ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-700 text-white cursor-pointer'
+                    : 'px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer';
+            }
+        }
+        if (tabName === 'transactions') loadAdminTransactions(false);
+        if (tabName === 'schools') loadAdminSchools(false);
+        if (tabName === 'accounts') loadAdminAccounts();
+    }
+
+    function loadAdminOverview() {
+        if (!sessionData || sessionData.role !== 'ADMIN') return;
+        $('adminOverviewLoading').classList.remove('hidden');
+
+        var filters = {
+            cabdin: $('overviewCabdin') ? String($('overviewCabdin').value || '') : '',
+            tipe: $('overviewTipe') ? String($('overviewTipe').value || '') : ''
+        };
+
+        callGasServer_('getAdminOverview', [String(sessionData.sessionToken), filters], function (res) {
+            $('adminOverviewLoading').classList.add('hidden');
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal memuat ringkasan admin.', 'error');
+                return;
+            }
+            var m = res.metrics || {};
+            $('adminMetricBelanja').textContent = 'Rp ' + formatRibuan(m.totalBelanja);
+            $('adminMetricTotalNominal').textContent = 'Rp ' + formatRibuan(m.totalPajakSetor);
+            $('adminMetricPaid').textContent = 'Rp ' + formatRibuan(m.nominalNtpn);
+            $('adminMetricTransactions').textContent = (m.totalTransaksi || 0) + ' transaksi';
+            $('adminMetricPending').textContent = (m.transaksiBelumNtpn || 0) + ' transaksi belum NTPN';
+            $('adminMetricProfile').textContent = (m.profilLengkap || 0) + ' / ' + (m.totalSekolah || 0);
+            $('adminMetricIncomplete').textContent = (m.profilBelumLengkap || 0) + ' sekolah belum lengkap';
+            $('adminMetricUnit').textContent = (m.unitLengkap || 0) + ' / ' + (m.totalUnit || 0);
+            $('adminMetricUnitLogin').textContent = (m.unitBelumLogin || 0) + ' unit belum login';
+            $('adminMetricNeverLogin').textContent = m.sekolahBelumLogin || 0;
+        }, function (err) {
+            $('adminOverviewLoading').classList.add('hidden');
+            showToast('Gagal memuat ringkasan admin: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    /* ===================== ADMIN TRANSAKSI (CACHE & FILTER INSTAN) ===================== */
+
+    function getAdminTxItemEntityType(item) {
+        var npsn = String(item.npsn || '').trim();
+        if (/^(?:CABDIS|CABDIN)[-\s_]*\d+$/i.test(npsn) || (item.namaSekolah && item.namaSekolah.toUpperCase().indexOf('CABANG DINAS') !== -1)) {
+            return 'CABDIS';
+        }
+        var dinasCodes = ['SEKRETARIAT', 'BID-SMA', 'BID-SMK', 'BID-PKLK', 'BID-PTK', 'UPTD-TIK'];
+        if (dinasCodes.indexOf(npsn.toUpperCase()) !== -1 ||
+            (item.cabangDinas && item.cabangDinas.toUpperCase().indexOf('DINAS PENDIDIKAN PROVSU') !== -1) ||
+            (item.namaSekolah && (item.namaSekolah.toUpperCase().indexOf('BIDANG') !== -1 ||
+                item.namaSekolah.toUpperCase().indexOf('SEKRETARIAT') !== -1 ||
+                item.namaSekolah.toUpperCase().indexOf('UPTD') !== -1))) {
+            return 'DINAS_PUSAT';
+        }
+        return 'SEKOLAH';
+    }
+
+    function getAdminTransactionFilters() {
+        return {
+            q: $('adminTxSearch') ? String($('adminTxSearch').value || '').trim() : '',
+            tipeUnit: $('adminTxTipeUnit') ? String($('adminTxTipeUnit').value || '') : '',
+            cabdin: $('adminTxCabdin') ? String($('adminTxCabdin').value || '') : '',
+            kabKota: $('adminTxKabKota') ? String($('adminTxKabKota').value || '') : '',
+            bpp: $('adminTxBpp') ? String($('adminTxBpp').value || '') : '',
+            sumberDana: $('adminTxDana') ? String($('adminTxDana').value || '') : '',
+            startDate: $('adminTxStart') ? String($('adminTxStart').value || '') : '',
+            endDate: $('adminTxEnd') ? String($('adminTxEnd').value || '') : '',
+            ntpnStatus: $('adminTxNtpn') ? String($('adminTxNtpn').value || '') : ''
+        };
+    }
+
+    function debounceAdminTransactions() {
+        var q = $('adminTxSearch') ? $('adminTxSearch').value.trim() : '';
+        var btnClear = $('btnClearAdminTxSearch');
+        if (btnClear) btnClear.classList.toggle('hidden', !q);
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () { applyAdminTxFilters(true); }, 250);
+    }
+
+    function clearAdminTxSearch() {
+        $('adminTxSearch').value = '';
+        var btnClear = $('btnClearAdminTxSearch');
+        if (btnClear) btnClear.classList.add('hidden');
+        applyAdminTxFilters(true);
+    }
+
+    function refreshAdminTxCache() {
+        adminTxAllData = null;
+        adminTxCacheTime = null;
+        var cInfo = $('adminTxCacheInfo');
+        if (cInfo) cInfo.classList.add('hidden');
+        loadAdminTransactions(true);
+    }
+
+    function invalidateAdminTxCache() {
+        adminTxAllData = null;
+        adminTxCacheTime = null;
+    }
+
+    function showAdminTxFilterToast(message) {
+        var toast = $('adminTxFilterToast');
+        var msgEl = $('adminTxFilterToastMsg');
+        if (!toast || !msgEl) return;
+        msgEl.textContent = message;
+        toast.classList.remove('hidden');
+        if (adminTxToastTimer) clearTimeout(adminTxToastTimer);
+        adminTxToastTimer = setTimeout(function () {
+            toast.classList.add('hidden');
+        }, 2500);
+    }
+
+    function removeSpecificTxFilter(fieldKey) {
+        if (fieldKey === 'q') {
+            $('adminTxSearch').value = '';
+            var b = $('btnClearAdminTxSearch');
+            if (b) b.classList.add('hidden');
+        } else if (fieldKey === 'tipeUnit') {
+            $('adminTxTipeUnit').value = '';
+        } else if (fieldKey === 'cabdin') {
+            $('adminTxCabdin').value = '';
+        } else if (fieldKey === 'kabKota') {
+            $('adminTxKabKota').value = '';
+        } else if (fieldKey === 'bpp') {
+            $('adminTxBpp').value = '';
+        } else if (fieldKey === 'sumberDana') {
+            $('adminTxDana').value = '';
+        } else if (fieldKey === 'ntpnStatus') {
+            $('adminTxNtpn').value = '';
+        } else if (fieldKey === 'startDate') {
+            $('adminTxStart').value = '';
+        } else if (fieldKey === 'endDate') {
+            $('adminTxEnd').value = '';
+        }
+        applyAdminTxFilters(true);
+    }
+
+    function resetAdminTxFilters() {
+        $('adminTxSearch').value = '';
+        var b = $('btnClearAdminTxSearch');
+        if (b) b.classList.add('hidden');
+        if ($('adminTxTipeUnit')) $('adminTxTipeUnit').value = '';
+        if ($('adminTxCabdin')) $('adminTxCabdin').value = '';
+        if ($('adminTxKabKota')) {
+            updateSmartKabKotaFilter('', 'adminTxKabKota');
+            $('adminTxKabKota').value = '';
+        }
+        if ($('adminTxBpp')) $('adminTxBpp').value = '';
+        if ($('adminTxDana')) $('adminTxDana').value = '';
+        if ($('adminTxNtpn')) $('adminTxNtpn').value = '';
+        applyAdminTxFilters(true);
+    }
+
+    function applyAdminTxFilters(resetPage) {
+        if (resetPage) adminTxPage = 1;
+        if (!adminTxAllData) {
+            loadAdminTransactions(true);
+            return;
+        }
+
+        var f = getAdminTransactionFilters();
+        if (f.startDate && f.endDate && f.startDate > f.endDate) {
+            showToast('Tanggal BPP mulai tidak boleh melebihi tanggal BPP sampai.', 'warning');
+            return;
+        }
+
+        var q = f.q.toLowerCase();
+        adminTxFiltered = adminTxAllData.filter(function (item) {
+            if (f.tipeUnit) {
+                var entType = getAdminTxItemEntityType(item);
+                if (f.tipeUnit === 'SEKOLAH' && entType !== 'SEKOLAH') return false;
+                if (f.tipeUnit === 'ALL_UNIT' && entType === 'SEKOLAH') return false;
+                if (f.tipeUnit === 'DINAS_PUSAT' && entType !== 'DINAS_PUSAT') return false;
+                if (f.tipeUnit === 'CABDIS' && entType !== 'CABDIS') return false;
+            }
+            if (f.cabdin && item.cabangDinas !== f.cabdin) return false;
+            if (f.kabKota && item.kabKota !== f.kabKota) return false;
+            if (f.bpp && item.bppJenisPajak !== f.bpp) return false;
+            if (f.sumberDana && item.sumberDana !== f.sumberDana) return false;
+            if (f.startDate && item.bppTanggal && item.bppTanggal < f.startDate) return false;
+            if (f.endDate && item.bppTanggal && item.bppTanggal > f.endDate) return false;
+            if (f.ntpnStatus === 'LENGKAP' && !item.ntpn && !item.isSiplah) return false;
+            if (f.ntpnStatus === 'BELUM' && (item.ntpn || item.isSiplah)) return false;
+            if (q) {
+                var match =
+                    (item.npsn || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.namaSekolah || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.namaPerusahaan || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.uraianKegiatan || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.noBilling || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.ntpn || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.jenisPajakRincian || '').toLowerCase().indexOf(q) !== -1 ||
+                    (item.ket || '').toLowerCase().indexOf(q) !== -1;
+                if (!match) return false;
+            }
+            return true;
+        });
+
+        updateAdminTxFilterBadges(f);
+        renderAdminTxClientSide();
+    }
+
+    function renderAdminTxClientSide() {
+        var totalItems = adminTxFiltered.length;
+        var totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_TX_PAGE_SIZE));
+        if (adminTxPage > totalPages) adminTxPage = totalPages;
+        if (adminTxPage < 1) adminTxPage = 1;
+        var start = (adminTxPage - 1) * ADMIN_TX_PAGE_SIZE;
+        var pageItems = adminTxFiltered.slice(start, start + ADMIN_TX_PAGE_SIZE);
+
+        var totalBelanja = 0, totalPajak = 0, belumNtpn = 0;
+        for (var j = 0; j < adminTxFiltered.length; j++) {
+            totalBelanja += Number(adminTxFiltered[j].nilaiBelanja || 0);
+            totalPajak += Number(adminTxFiltered[j].nilaiPajakSetor || 0);
+            if (!adminTxFiltered[j].ntpn && !adminTxFiltered[j].isSiplah) belumNtpn++;
+        }
+
+        adminTransactionItems = pageItems;
+        renderAdminTransactions({
+            items: pageItems,
+            currentPage: adminTxPage,
+            totalPages: totalPages,
+            totalItems: totalItems,
+            summary: { totalBelanja: totalBelanja, totalPajakSetor: totalPajak, belumNtpn: belumNtpn }
+        });
+    }
+
+    function updateAdminTxFilterBadges(f) {
+        var LABELS = {
+            q: 'Kata Kunci', tipeUnit: 'Entitas', cabdin: 'Cabdin', kabKota: 'Kab/Kota',
+            bpp: 'Pajak', sumberDana: 'Dana', ntpnStatus: 'Status',
+            startDate: 'Tgl Mulai', endDate: 'Tgl Sampai'
+        };
+        var active = [];
+        for (var k in f) {
+            if (f[k]) {
+                var displayVal = f[k];
+                if (k === 'ntpnStatus') displayVal = f[k] === 'LENGKAP' ? 'Lengkap NTPN' : 'Belum NTPN';
+                else if (k === 'tipeUnit') {
+                    if (f[k] === 'SEKOLAH') displayVal = 'Sekolah Negeri';
+                    else if (f[k] === 'ALL_UNIT') displayVal = 'Unit Dinas & Cabdis';
+                    else if (f[k] === 'DINAS_PUSAT') displayVal = 'Dinas Induk Provsu';
+                    else if (f[k] === 'CABDIS') displayVal = 'Cabang Dinas';
+                }
+                active.push({ key: k, label: LABELS[k] || k, val: displayVal });
+            }
+        }
+
+        var countEl = $('adminTxFilterCount');
+        var resetBtn = $('btnResetAdminTxFilter');
+        var wrapEl = $('adminTxFilterPillsWrap');
+        var pillsEl = $('adminTxFilterPills');
+        var filterInfoEl = $('adminTxFilterInfo');
+
+        if (active.length > 0) {
+            if (countEl) {
+                countEl.textContent = active.length + ' Filter Aktif';
+                countEl.classList.remove('hidden');
+            }
+            if (resetBtn) resetBtn.classList.remove('hidden');
+            if (wrapEl) wrapEl.classList.remove('hidden');
+            if (filterInfoEl) {
+                filterInfoEl.textContent = 'Menyaring ' + adminTxFiltered.length + ' dari ' + (adminTxAllData ? adminTxAllData.length : 0) + ' data';
+            }
+            if (pillsEl) {
+                var html = '';
+                for (var i = 0; i < active.length; i++) {
+                    var it = active[i];
+                    html += '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg font-medium shadow-2xs">' +
+                        '<span>' + escapeHtml(it.label) + ': <strong>' + escapeHtml(it.val) + '</strong></span>' +
+                        '<button type="button" data-key="' + escapeHtml(it.key) + '" onclick="removeSpecificTxFilter(this.dataset.key)" title="Hapus filter ini" class="text-emerald-500 hover:text-rose-600 font-bold ml-0.5 cursor-pointer">✕</button>' +
+                        '</span>';
+                }
+                pillsEl.innerHTML = html;
+            }
+            showAdminTxFilterToast('🎯 ' + adminTxFiltered.length + ' transaksi ditemukan');
+        } else {
+            if (countEl) countEl.classList.add('hidden');
+            if (resetBtn) resetBtn.classList.add('hidden');
+            if (wrapEl) wrapEl.classList.add('hidden');
+            if (pillsEl) pillsEl.innerHTML = '';
+            if (filterInfoEl) {
+                filterInfoEl.textContent = 'Semua ' + (adminTxAllData ? adminTxAllData.length : 0) + ' transaksi ditampilkan';
+            }
+        }
+    }
+
+    function loadAdminTransactions(resetPage) {
+        if (!sessionData || sessionData.role !== 'ADMIN') return;
+        if (resetPage) adminTxPage = 1;
+
+        if (adminTxAllData) {
+            applyAdminTxFilters(false);
+            return;
+        }
+
+        var loader = $('adminTxLoading');
+        if (loader) loader.classList.remove('hidden');
+        $('adminTxSummary').textContent = 'Mengunduh data transaksi dari server...';
+
+        callGasServer_('getAdminTransactions', [String(sessionData.sessionToken), 1, 9999, {}], function (res) {
+            if (loader) loader.classList.add('hidden');
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal memuat transaksi admin.', 'error');
+                return;
+            }
+
+            adminTxAllData = res.items || [];
+            adminTxCacheTime = new Date();
+            populateAdminTxDropdowns(adminTxAllData);
+
+            var cacheBox = $('adminTxCacheInfo');
+            var cacheTxt = $('adminTxCacheText');
+            if (cacheBox && cacheTxt) {
+                var timeStr = adminTxCacheTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                cacheTxt.textContent = adminTxAllData.length + ' data (' + timeStr + ')';
+                cacheBox.classList.remove('hidden');
+            }
+
+            applyAdminTxFilters(false);
+        }, function (err) {
+            if (loader) loader.classList.add('hidden');
+            showToast('Gagal memuat transaksi admin: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function populateAdminTxDropdowns(data) {
+        var bpps = {}, danas = {};
+        for (var i = 0; i < data.length; i++) {
+            var d = data[i];
+            if (d.bppJenisPajak) bpps[d.bppJenisPajak] = true;
+            if (d.sumberDana) danas[d.sumberDana] = true;
+        }
+
+        // Pertahankan 14 Cabang Dinas resmi secara permanen (jangan hapus Cabdis yang transaksinya masih 0)
+        var cabdinEl = $('adminTxCabdin');
+        var curCab = cabdinEl ? cabdinEl.value : '';
+        var cabList = (allMasterCabdinList && allMasterCabdinList.length >= 14) ? allMasterCabdinList : DEFAULT_OFFICIAL_CABDIS;
+        if (cabdinEl && cabdinEl.options.length <= 1) {
+            fillDropdown('adminTxCabdin', cabList, 'Semua Cabang Dinas');
+            if (curCab) cabdinEl.value = curCab;
+        }
+
+        // Sinkronkan filter Kabupaten/Kota berdasarkan Cabang Dinas terpilih
+        updateSmartKabKotaFilter(curCab, 'adminTxKabKota');
+
+        // Untuk Jenis Pajak BPP dan Sumber Dana, perbarui opsi dengan menggabungkan opsi master & transaksi
+        function fillSel(id, map, placeholder) {
+            var el = $(id);
+            if (!el) return;
+            var cur = el.value;
+            for (var optIdx = 0; optIdx < el.options.length; optIdx++) {
+                var v = el.options[optIdx].value;
+                if (v) map[v] = true;
+            }
+            el.innerHTML = '<option value="">' + placeholder + '</option>';
+            var keys = Object.keys(map).sort();
+            for (var k = 0; k < keys.length; k++) {
+                var o = document.createElement('option');
+                o.value = keys[k];
+                o.textContent = keys[k];
+                el.appendChild(o);
+            }
+            if (cur && map[cur]) el.value = cur;
+        }
+        fillSel('adminTxBpp', bpps, 'Semua Jenis Pajak');
+        fillSel('adminTxDana', danas, 'Semua Sumber Dana');
+    }
+
+    function renderAdminTransactions(res) {
+        var body = $('adminTxBody');
+        body.innerHTML = '';
+        if (!res.items || !res.items.length) {
+            body.innerHTML =
+                '<tr><td colspan="7" class="p-8 text-center text-slate-400">' +
+                '<div class="text-base font-medium text-slate-600 mb-1">🔍 Tidak ada transaksi yang sesuai filter</div>' +
+                '<div class="text-xs text-slate-400 mb-3">Coba ubah kata kunci atau bersihkan pilihan filter Anda</div>' +
+                '<button type="button" onclick="resetAdminTxFilters()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer">✕ Bersihkan Filter</button>' +
+                '</td></tr>';
+        } else {
+            for (var i = 0; i < res.items.length; i++) {
+                var item = res.items[i];
+                var tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+
+                var isSiplah = item.isSiplah;
+                var entType = getAdminTxItemEntityType(item);
+                var platformTag = (entType === 'SEKOLAH') ? '🛍️ SIPLah' : '🛍️ E-Katalog';
+                var ntpnBadge = isSiplah
+                    ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-100 text-blue-800">' + platformTag + '</span>'
+                    : (item.ntpn
+                        ? '<div class="text-emerald-700 font-semibold font-mono text-[11px]">NTPN: ' + escapeHtml(item.ntpn) + '</div>'
+                        : '<div class="text-amber-700 font-semibold text-[11px]">⏳ Belum NTPN</div>');
+
+                var entBadge = entType === 'DINAS_PUSAT'
+                    ? ' <span class="px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-semibold">DINAS PROV</span>'
+                    : (entType === 'CABDIS'
+                        ? ' <span class="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded text-[10px] font-semibold">CABDIS</span>'
+                        : '');
+
+                // Sinkronisasi field noInvoiceSiplah / noInvoice
+                var invDisplay = typeof extractInvoiceSiplah_ === 'function'
+                    ? extractInvoiceSiplah_(item)
+                    : (item.noInvoiceSiplah || item.noInvoice || '');
+
+                var billingColHtml = isSiplah
+                    ? (invDisplay
+                        ? '<div class="text-blue-800 font-semibold mb-0.5">Inv: ' + escapeHtml(invDisplay) + '</div>'
+                        : '<div class="text-slate-400 mb-0.5">-</div>') + ntpnBadge
+                    : escapeHtml(item.noBilling || '-') + '<div class="mt-0.5">' + ntpnBadge + '</div>';
+
+                tr.innerHTML =
+                    '<td class="p-3"><strong>' + escapeHtml(item.namaSekolah) + '</strong>' + entBadge + '<div class="text-slate-500 text-[11px]">' + escapeHtml(item.npsn) + ' • ' + escapeHtml(item.cabangDinas) + '</div></td>' +
+                    '<td class="p-3">' + escapeHtml(item.bppTanggal || '-') + '<div class="text-slate-500 text-[11px]">' + escapeHtml(item.sumberDana || '-') + '</div></td>' +
+                    '<td class="p-3 max-w-xs"><strong class="line-clamp-2">' + escapeHtml(item.uraianKegiatan) + '</strong><div class="text-slate-500 text-[11px]">' + escapeHtml(item.namaPerusahaan) + '</div></td>' +
+                    '<td class="p-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-semibold">' + escapeHtml(item.bppJenisPajak) + '</span><div class="text-slate-500 text-[11px] mt-0.5">' + escapeHtml(item.jenisPajakRincian) + '</div></td>' +
+                    '<td class="p-3 text-right whitespace-nowrap"><div class="text-slate-600">Rp ' + formatRibuan(item.nilaiBelanja) + '</div><div class="font-bold text-emerald-800 text-sm">Rp ' + formatRibuan(item.nilaiPajakSetor) + '</div></td>' +
+                    '<td class="p-3 font-mono text-xs">' + billingColHtml + '</td>' +
+                    '<td class="p-3 text-center whitespace-nowrap space-x-1">' +
+                    (item.linkBukti ? '<a href="' + escapeHtml(item.linkBukti) + '" target="_blank" rel="noopener noreferrer" class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-medium inline-block hover:bg-emerald-200" title="Buka Link Dokumen">🔗 Bukti</a>' : '') +
+                    '<button type="button" onclick="startAdminEdit(' + i + ')" class="px-2 py-1 bg-amber-100 text-amber-900 rounded-lg hover:bg-amber-200 font-medium cursor-pointer">Edit</button>' +
+                    '<button type="button" onclick="printAdminTransaction(' + i + ')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium cursor-pointer">Bukti</button>' +
+                    '<button type="button" onclick="deleteAdminTransaction(' + i + ')" class="px-2 py-1 bg-rose-100 text-rose-800 rounded-lg hover:bg-rose-200 font-medium cursor-pointer">Hapus</button>' +
+                    '</td>';
+                body.appendChild(tr);
+            }
+        }
+
+        $('adminTxSummary').textContent =
+            res.totalItems + ' transaksi • Total Belanja Rp ' + formatRibuan(res.summary.totalBelanja) +
+            ' • Pajak Setor Rp ' + formatRibuan(res.summary.totalPajakSetor) + ' • ' + res.summary.belumNtpn + ' belum NTPN';
+        $('adminTxPageInfo').textContent = 'Halaman ' + res.currentPage + ' dari ' + res.totalPages + ' (' + res.totalItems + ' data)';
+        $('adminTxPrev').disabled = res.currentPage <= 1;
+        $('adminTxNext').disabled = res.currentPage >= res.totalPages;
+    }
+
+    function changeAdminTxPage(delta) {
+        adminTxPage += delta;
+        renderAdminTxClientSide();
+    }
+
+    function exportAdminCsv() {
+        if (!sessionData || sessionData.role !== 'ADMIN') return;
+        callGasServer_('exportAdminTransactions', [String(sessionData.sessionToken), getAdminTransactionFilters()], function (res) {
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal mengekspor CSV.', 'error');
+                return;
+            }
+            var blob = new Blob(['\uFEFF' + res.csv], { type: 'text/csv;charset=utf-8' });
+            var url = window.URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'rekap-pajak-terfilter-' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function () { window.URL.revokeObjectURL(url); }, 2500);
+            showToast('Berhasil mengekspor ' + (res.count || 0) + ' transaksi ke CSV.', 'success');
+        }, function (err) {
+            showToast('Gagal mengekspor CSV: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function printAdminTransaction(index) {
+        var item = adminTransactionItems[index];
+        if (!item) return;
+        lastSavedReceipt = item;
+        if (typeof printCurrentReceipt === 'function') printCurrentReceipt();
+    }
+
+    function startAdminEdit(index) {
+        var item = adminTransactionItems[index];
+        if (!item) return;
+        adminEditing = true;
+        editingRecordNo = item.no;
+        $('adminDashboard').classList.add('hidden');
+        $('operatorWorkspace').classList.remove('hidden');
+        $('tabFormPajak').classList.remove('hidden');
+        $('tabRiwayatPajak').classList.add('hidden');
+        $('tabFormProfil').classList.add('hidden');
+        if ($('tabCabdisMonitoring')) $('tabCabdisMonitoring').classList.add('hidden');
+        $('p_npsn').value = item.npsn || '';
+        $('p_namaSekolah').value = item.namaSekolah || '';
+        $('p_subUnitCoretax').value = item.subUnitCoretax || '';
+        $('p_kabKota').value = item.kabKota || '';
+        $('p_cabangDinas').value = item.cabangDinas || '';
+        if (typeof fillRekapForm === 'function') fillRekapForm(item);
+        $('editModeBanner').classList.remove('hidden');
+        $('editModeTitle').textContent = 'Admin mengoreksi transaksi #' + item.no + ' — ' + item.namaSekolah;
+        $('btnCancelEdit').onclick = cancelAdminEdit;
+        $('btnResetForm').classList.add('hidden');
+        $('btnSubmitRekap').innerHTML = '<span>Simpan Koreksi Admin #' + escapeHtml(item.no) + '</span>';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelAdminEdit() {
+        adminEditing = false;
+        if (typeof cancelEditMode === 'function') cancelEditMode();
+        $('operatorWorkspace').classList.add('hidden');
+        $('adminDashboard').classList.remove('hidden');
+        switchAdminTab('transactions');
+    }
+
+    function deleteAdminTransaction(index) {
+        var item = adminTransactionItems[index];
+        if (!item) return;
+
+        openCustomConfirm(
+            'Hapus Transaksi Permanen?',
+            'Hapus permanen transaksi #' + item.no + ' milik ' + item.namaSekolah + '? Tindakan ini tidak dapat dibatalkan.',
+            function () {
+                callGasServer_('deleteAdminTransaction', [String(sessionData.sessionToken), Number(item.rowIdx), String(item.no), String(item.npsn)], function (res) {
+                    if (!res || res.status !== 'success') {
+                        showToast(res && res.message ? res.message : 'Gagal menghapus transaksi.', 'error');
+                        return;
+                    }
+                    invalidateAdminTxCache();
+                    loadAdminTransactions(true);
+                    loadAdminOverview();
+                    showToast('Transaksi #' + item.no + ' berhasil dihapus.', 'success');
+                }, function (err) {
+                    showToast('Gagal menghapus transaksi: ' + (err && err.message ? err.message : String(err)), 'error');
+                });
+            },
+            true
+        );
+    }
+
+    /* ===================== ADMIN: RADAR KEPATUHAN SEKOLAH & UNIT ===================== */
+
+    function debounceAdminSchools() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () { loadAdminSchools(true); }, 350);
+    }
+
+    function resetAdminSchoolFilters() {
+        if ($('adminSchoolSearch')) $('adminSchoolSearch').value = '';
+        if ($('adminSchoolTipe')) $('adminSchoolTipe').value = '';
+        if ($('adminSchoolCabdin')) $('adminSchoolCabdin').value = '';
+        if ($('adminSchoolKabKota')) {
+            updateSmartKabKotaFilter('', 'adminSchoolKabKota');
+            $('adminSchoolKabKota').value = '';
+        }
+        if ($('adminSchoolStatus')) $('adminSchoolStatus').value = '';
+        updateAdminSchoolFilterBadges();
+        loadAdminSchools(true);
+    }
+
+    function updateAdminSchoolFilterBadges() {
+        var LABELS = { search: 'Cari', tipe: 'Jenis Unit', cabdin: 'Cabdin', kabKota: 'Kab/Kota', status: 'Status Profil' };
+        var vals = {
+            search: $('adminSchoolSearch') ? $('adminSchoolSearch').value.trim() : '',
+            tipe: $('adminSchoolTipe') ? $('adminSchoolTipe').value : '',
+            cabdin: $('adminSchoolCabdin') ? $('adminSchoolCabdin').value : '',
+            kabKota: $('adminSchoolKabKota') ? $('adminSchoolKabKota').value : '',
+            status: $('adminSchoolStatus') ? $('adminSchoolStatus').value : ''
+        };
+        var active = [];
+        for (var k in vals) {
+            if (vals[k]) {
+                var display = vals[k];
+                if (k === 'status') {
+                    if (display === 'LENGKAP') display = 'Lengkap';
+                    else if (display === 'BELUM_LENGKAP') display = 'Belum Lengkap';
+                    else if (display === 'BELUM_LOGIN') display = 'Belum Login';
+                }
+                active.push({ key: k, label: LABELS[k] || k, val: display });
+            }
+        }
+
+        var countEl = $('adminSchoolFilterCount');
+        var resetBtn = $('btnResetAdminSchoolFilter');
+        var wrapEl = $('adminSchoolFilterPillsWrap');
+        var pillsEl = $('adminSchoolFilterPills');
+
+        if (active.length > 0) {
+            if (countEl) {
+                countEl.textContent = active.length + ' Filter Aktif';
+                countEl.classList.remove('hidden');
+            }
+            if (resetBtn) resetBtn.classList.remove('hidden');
+            if (wrapEl) wrapEl.classList.remove('hidden');
+            if (pillsEl) {
+                var html = '';
+                for (var i = 0; i < active.length; i++) {
+                    html += '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg font-medium">' +
+                        '<span>' + escapeHtml(active[i].label) + ': <strong>' + escapeHtml(active[i].val) + '</strong></span>' +
+                        '</span>';
+                }
+                pillsEl.innerHTML = html;
+            }
+        } else {
+            if (countEl) countEl.classList.add('hidden');
+            if (resetBtn) resetBtn.classList.add('hidden');
+            if (wrapEl) wrapEl.classList.add('hidden');
+            if (pillsEl) pillsEl.innerHTML = '';
+        }
+    }
+
+    function loadAdminSchools(resetPage) {
+        if (!sessionData || sessionData.role !== 'ADMIN') return;
+        if (resetPage) adminSchoolPage = 1;
+
+        var q = String($('adminSchoolSearch') ? $('adminSchoolSearch').value : '').trim();
+        var cab = String($('adminSchoolCabdin') ? $('adminSchoolCabdin').value : '');
+        var kab = String($('adminSchoolKabKota') ? $('adminSchoolKabKota').value : '');
+        var stat = String($('adminSchoolStatus') ? $('adminSchoolStatus').value : '');
+        var tipe = String($('adminSchoolTipe') ? $('adminSchoolTipe').value : '');
+
+        // Tampilkan indikator loading elegan seketika pada tabel agar user mengetahui filter sedang diproses
+        var body = $('adminSchoolBody');
+        if (body) {
+            body.innerHTML =
+                '<tr><td colspan="6" class="py-14 text-center text-slate-500">' +
+                '<div class="flex flex-col items-center justify-center gap-3">' +
+                '<div class="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>' +
+                '<span class="text-xs font-semibold text-slate-700">Menyaring data radar kepatuhan...</span>' +
+                '<span class="text-[11px] text-slate-400">Menghubungkan ke database SAJAK</span>' +
+                '</div></td></tr>';
+        }
+
+        // Tampilkan toast umpan balik instan saat filter aktif dipilih
+        if (resetPage && (cab || kab || stat || tipe || q)) {
+            if (typeof showToast === 'function') {
+                showToast('Sedang memfilter data radar kepatuhan...', 'info', 1200);
+            }
+        }
+
+        callGasServer_('getAdminSchools', [String(sessionData.sessionToken), Number(adminSchoolPage), 25, q, cab, stat, tipe, kab], function (res) {
+            if (!res || res.status !== 'success') {
+                var errMsg = res && res.message ? res.message : 'Gagal memuat radar kepatuhan.';
+                showToast(errMsg, 'error');
+                if (body) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-rose-500 font-medium">Gagal memuat data: ' + escapeHtml(errMsg) + '</td></tr>';
+                }
+                return;
+            }
+            adminSchoolPage = res.currentPage;
+            if (body) body.innerHTML = '';
+            currentAdminSchoolsList = res.items || [];
+            if (!res.items.length) {
+                if (body) body.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">Tidak ada data yang sesuai filter.</td></tr>';
+            }
+            for (var i = 0; i < res.items.length; i++) {
+                var item = res.items[i];
+                var badge = item.jenis === 'UNIT_DINAS'
+                    ? ' <span class="px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-semibold">UNIT DINAS</span>'
+                    : '';
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="p-3">' +
+                    '<button type="button" onclick="openSchoolDetailModalByIndex(' + i + ', \'admin\')" class="text-left group cursor-pointer focus:outline-none w-full block">' +
+                    '<div class="font-bold text-slate-900 group-hover:text-emerald-700 group-hover:underline flex items-center gap-1.5 leading-snug">' +
+                    '<span>' + escapeHtml(item.namaSekolah) + '</span>' + badge +
+                    '<span class="text-xs text-emerald-600 opacity-60 group-hover:opacity-100 transition-opacity" title="Klik untuk melihat profil lengkap">ℹ️</span>' +
+                    '</div>' +
+                    '<div class="text-slate-500 font-mono text-[11px] mt-0.5">' + escapeHtml(item.npsn || 'NPSN belum tersedia') + '</div>' +
+                    '</button></td>' +
+                    '<td class="p-3">' + escapeHtml(item.cabangDinas || '-') + '<div class="text-slate-500">' + escapeHtml(item.kabKota || '-') + '</div></td>' +
+                    '<td class="p-3"><span class="' + (item.status === 'LENGKAP' ? 'text-emerald-700 font-semibold' : 'text-amber-700') + '">' + (item.status === 'LENGKAP' ? 'Profil &amp; Coretax lengkap' : 'Profil/Coretax belum lengkap') + '</span><div class="text-slate-500">' + (item.pernahLogin ? 'Pernah login' : 'Belum pernah login') + '</div></td>' +
+                    '<td class="p-3"><div>' + escapeHtml(item.pejabat1Label) + ': ' + escapeHtml(item.pejabat1 || '-') + ' <span class="text-slate-500">' + escapeHtml(item.pejabat1Id) + '</span></div><div>' + escapeHtml(item.pejabat2Label) + ': ' + escapeHtml(item.pejabat2 || '-') + ' <span class="text-slate-500">' + escapeHtml(item.pejabat2Id) + '</span></div></td>' +
+                    '<td class="p-3 text-right">' + (item.totalTransaksi || 0) + '</td>' +
+                    '<td class="p-3 text-right">Rp ' + formatRibuan(item.totalNominal) + '<div class="text-emerald-700">NTPN: Rp ' + formatRibuan(item.nominalDenganNtpn) + '</div></td>';
+                body.appendChild(tr);
+            }
+            $('adminSchoolPageInfo').textContent = 'Halaman ' + res.currentPage + ' dari ' + res.totalPages + ' (' + res.totalItems + ' data)';
+            $('adminSchoolPrev').disabled = res.currentPage <= 1;
+            $('adminSchoolNext').disabled = res.currentPage >= res.totalPages;
+        }, function (err) {
+            showToast('Gagal memuat radar kepatuhan: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+
+        updateAdminSchoolFilterBadges();
+    }
+
+    function changeAdminSchoolPage(delta) {
+        adminSchoolPage += delta;
+        loadAdminSchools(false);
+    }
+
+    /* ===================== ADMIN: MANAJEMEN AKUN ===================== */
+
+    function debounceAdminAccounts() {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadAdminAccounts, 350);
+    }
+
+    function syncAccountRoleForm() {
+        var unit = $('newAccountRole').value === 'UNIT_DINAS';
+        var npsn = $('newAccountNpsn');
+        npsn.maxLength = unit ? 20 : 8;
+        npsn.placeholder = unit ? 'Kode Unit (mis. CABDIS15)' : 'NPSN (8 digit)';
+        npsn.value = '';
+    }
+
+    function loadAdminAccounts() {
+        if (!sessionData || sessionData.role !== 'ADMIN') return;
+        var q = String($('adminAccountSearch').value || '').trim();
+        callGasServer_('getAdminAccounts', [String(sessionData.sessionToken), q], function (res) {
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal memuat akun.', 'error');
+                return;
+            }
+            accountListCache = res.items || [];
+            var body = $('adminAccountBody');
+            body.innerHTML = '';
+            if (!accountListCache.length) {
+                body.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada akun.</td></tr>';
+                return;
+            }
+            for (var i = 0; i < accountListCache.length; i++) {
+                var item = accountListCache[i];
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="p-3"><strong>' + escapeHtml(item.namaOperator) + '</strong><div class="text-slate-500">' + escapeHtml(item.username) + '</div></td>' +
+                    '<td class="p-3">' + escapeHtml(item.npsn) + '</td>' +
+                    '<td class="p-3">' + (item.role === 'UNIT_DINAS' ? '<span class="text-indigo-700 font-semibold">Unit Dinas</span>' : 'Operator Sekolah') + '</td>' +
+                    '<td class="p-3"><span class="' + (item.status === 'AKTIF' ? 'text-emerald-700 font-semibold' : 'text-rose-700 font-semibold') + '">' + escapeHtml(item.status) + '</span></td>' +
+                    '<td class="p-3">' + escapeHtml(item.lastLogin || 'Belum ada login tercatat') + '</td>' +
+                    '<td class="p-3 text-center whitespace-nowrap space-x-1">' +
+                    '<button type="button" onclick="editAdminOperator(' + i + ')" class="px-2 py-1 bg-sky-100 text-sky-900 rounded-lg font-medium cursor-pointer">Edit</button>' +
+                    '<button type="button" onclick="resetAdminOperatorPassword(' + i + ')" class="px-2 py-1 bg-amber-100 text-amber-900 rounded-lg font-medium cursor-pointer">Reset Password</button>' +
+                    '<button type="button" onclick="toggleAdminOperatorStatus(' + i + ')" class="px-2 py-1 bg-slate-100 rounded-lg font-medium cursor-pointer">' + (item.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan') + '</button>' +
+                    '<button type="button" onclick="deleteAdminOperator(' + i + ')" class="px-2 py-1 bg-rose-100 text-rose-800 rounded-lg font-medium cursor-pointer">Hapus</button>' +
+                    '</td>';
+                body.appendChild(tr);
+            }
+        }, function (err) {
+            showToast('Gagal memuat akun: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function adminAccountCall(action, payload, successMsg) {
+        callGasServer_('manageAdminOperator', [String(sessionData.sessionToken), String(action), payload], function (res) {
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal memproses akun.', 'error');
+                return;
+            }
+            loadAdminAccounts();
+            if (successMsg) showSimpleModal('Berhasil!', successMsg);
+        }, function (err) {
+            showToast('Gagal memproses akun: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function createAdminOperator(event) {
+        if (event && event.preventDefault) event.preventDefault();
+        var btn = $('btnAddAccountAdmin');
+        var payload = {
+            role: String($('newAccountRole').value || 'OPERATOR'),
+            npsn: String($('newAccountNpsn').value || '').trim(),
+            username: String($('newAccountUsername').value || '').trim(),
+            namaOperator: String($('newAccountName').value || '').trim(),
+            password: String($('newAccountPassword').value || '')
+        };
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span><span> Menyimpan...</span>';
+
+        callGasServer_('manageAdminOperator', [String(sessionData.sessionToken), 'create', payload], function (res) {
+            btn.disabled = false;
+            btn.textContent = 'Tambah Akun';
+            if (!res || res.status !== 'success') {
+                showToast(res && res.message ? res.message : 'Gagal membuat akun.', 'error');
+                return;
+            }
+            ['newAccountNpsn', 'newAccountUsername', 'newAccountName', 'newAccountPassword'].forEach(function (id) {
+                if ($(id)) $(id).value = '';
+            });
+            loadAdminAccounts();
+            showSimpleModal('Akun Berhasil Dibuat!', res.message || 'Akun baru telah ditambahkan ke daftar Akun Operator.');
+        }, function (err) {
+            btn.disabled = false;
+            btn.textContent = 'Tambah Akun';
+            showToast('Gagal membuat akun: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    function editAdminOperator(i) {
+        var item = accountListCache[i];
+        if (!item) return;
+        openCustomPrompt(
+            'Ubah Nama Operator / Unit',
+            'Masukkan nama baru untuk akun ' + item.username + ' (' + item.npsn + '):',
+            item.namaOperator,
+            function (nameVal) {
+                var trimmed = String(nameVal || '').trim();
+                if (!trimmed) {
+                    showToast('Nama operator / unit tidak boleh kosong.', 'warning');
+                    return;
+                }
+                adminAccountCall('edit', { npsn: item.npsn, namaOperator: trimmed }, 'Nama akun berhasil diperbarui.');
+            },
+            'text',
+            'Nama operator / unit kerja'
+        );
+    }
+
+    function resetAdminOperatorPassword(i) {
+        var item = accountListCache[i];
+        if (!item) return;
+        openCustomPrompt(
+            'Reset Password Akun',
+            'Masukkan password baru untuk akun ' + item.username + ' (minimal 8 karakter):',
+            '',
+            function (passwordVal) {
+                var pw = String(passwordVal || '');
+                if (pw.length < 8) {
+                    showToast('Password minimal 8 karakter.', 'warning');
+                    return;
+                }
+                adminAccountCall('reset', { npsn: item.npsn, password: pw }, 'Password akun ' + item.username + ' berhasil direset.');
+            },
+            'password',
+            'Minimal 8 karakter'
+        );
+    }
+
+    function toggleAdminOperatorStatus(i) {
+        var item = accountListCache[i];
+        if (!item) return;
+        var next = item.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF';
+        openCustomConfirm(
+            'Ubah Status Akun',
+            'Ubah status akun ' + item.username + ' (' + item.namaOperator + ') menjadi ' + next + '?',
+            function () {
+                adminAccountCall('status', { npsn: item.npsn, status: next }, 'Status akun ' + item.username + ' diubah menjadi ' + next + '.');
+            },
+            next === 'NONAKTIF'
+        );
+    }
+
+    function deleteAdminOperator(i) {
+        var item = accountListCache[i];
+        if (!item) return;
+        if (sessionData && sessionData.admin && item.username === sessionData.admin.username) {
+            showToast('Anda tidak dapat menghapus akun yang sedang Anda gunakan.', 'warning');
+            return;
+        }
+        openCustomConfirm(
+            'Hapus Akun Permanen?',
+            'Hapus permanen akun ' + item.username + ' (' + item.namaOperator + ')? Data transaksi dan profil tetap tersimpan, tetapi akun tidak dapat login lagi.',
+            function () {
+                adminAccountCall('delete', { npsn: item.npsn }, 'Akun ' + item.username + ' berhasil dihapus.');
+            },
+            true
+        );
+    }
+
+    function generateOperatorAccounts() {
+        openCustomConfirm(
+            'Generate Akun Massal dari Data NPSN',
+            'Buat akun otomatis untuk seluruh sekolah pada tab Data NPSN yang belum memiliki akun? Password awal akan ditampilkan satu kali untuk diunduh CSV.',
+            function () {
+                var btn = $('btnGenAccountsAdmin');
+                btn.disabled = true;
+                btn.textContent = 'Memproses Generate...';
+
+                callGasServer_('generateAdminOperatorAccounts', [String(sessionData.sessionToken)], function (res) {
+                    btn.disabled = false;
+                    btn.textContent = 'Generate Akun Sekolah dari Data NPSN';
+                    if (!res || res.status !== 'success') {
+                        showToast(res && res.message ? res.message : 'Gagal generate akun.', 'error');
+                        return;
+                    }
+                    generatedAccountCredentials = res.credentials || [];
+                    var body = $('generatedCredentialsBody');
+                    body.innerHTML = '';
+                    for (var i = 0; i < generatedAccountCredentials.length; i++) {
+                        var item = generatedAccountCredentials[i];
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td class="p-2">' + escapeHtml(item.namaOperator) + '</td><td class="p-2">' + escapeHtml(item.username) + '</td><td class="p-2 font-mono">' + escapeHtml(item.password) + '</td>';
+                        body.appendChild(tr);
+                    }
+                    if (generatedAccountCredentials.length > 0) {
+                        $('generatedCredentials').classList.remove('hidden');
+                    }
+                    loadAdminAccounts();
+                    showSimpleModal('Generate Akun Selesai!', (res.count || 0) + ' akun operator sekolah baru berhasil dibuat dari Data NPSN.');
+                }, function (err) {
+                    btn.disabled = false;
+                    btn.textContent = 'Generate Akun Sekolah dari Data NPSN';
+                    showToast('Gagal generate akun: ' + (err && err.message ? err.message : String(err)), 'error');
+                });
+            },
+            false
+        );
+    }
+
+    function downloadGeneratedCredentials() {
+        if (!generatedAccountCredentials.length) return;
+        var rows = [['Nama Operator', 'Username', 'NPSN', 'Password']];
+        for (var i = 0; i < generatedAccountCredentials.length; i++) {
+            var item = generatedAccountCredentials[i];
+            rows.push([item.namaOperator, item.username, item.npsn, item.password]);
+        }
+        var csv = rows.map(function (row) {
+            return row.map(function (value) {
+                var text = String(value || '');
+                if (/^\s*[=+\-@]/.test(text)) text = "'" + text;
+                return '"' + text.replace(/"/g, '""') + '"';
+            }).join(',');
+        }).join('\r\n');
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+        link.download = 'kredensial-operator-' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function () { window.URL.revokeObjectURL(link.href); }, 2500);
+    }
+
+    /* ===================== 3A: REKONSILIASI KESELURUHAN & EXCEL ADMIN RAPI ===================== */
+
+    function openRekonsiliasiBpkModal() {
+        if (sessionData && sessionData.master) {
+            fillDropdown('bpk_cabdis', sessionData.master.cabdin || [], 'Semua Cabang Dinas (Seluruh Wilayah Provsu)');
+            fillDropdown('bpk_sumberDana', sessionData.master.sumberDana || [], 'Semua Sumber Dana (BOS, APBD, DAK, UP/GU)');
+        }
+        $('bpkExportLoading').classList.add('hidden');
+        $('modalRekonsiliasiBpk').classList.remove('hidden');
+    }
+
+    function closeRekonsiliasiBpkModal() {
+        $('modalRekonsiliasiBpk').classList.add('hidden');
+    }
+
+    function executeDownloadBpkExcel() {
+        var tahun = String($('bpk_tahunAnggaran').value || '');
+        var cabdis = String($('bpk_cabdis').value || '');
+        var sumberDana = String($('bpk_sumberDana').value || '');
+
+        var filters = { tahun: tahun, cabdis: cabdis, cabdin: cabdis, sumberDana: sumberDana };
+        var btn = $('btnDownloadBpkExcel');
+        var loading = $('bpkExportLoading');
+        btn.disabled = true;
+        loading.classList.remove('hidden');
+
+        callGasServer_('exportPaketRekonsiliasiExcel', [String(sessionData.sessionToken), filters], function (res) {
+            btn.disabled = false;
+            loading.classList.add('hidden');
+            if (!res || res.status !== 'success') {
+                showToast('Gagal menyusun rekonsiliasi keseluruhan: ' + (res && res.message ? res.message : 'Kesalahan tidak diketahui'), 'error');
+                return;
+            }
+
+            var excelStr = res.excelContent || res.content || '';
+            if (!excelStr) {
+                showToast('Data Excel kosong dari server.', 'warning');
+                return;
+            }
+
+            var blob = new Blob([excelStr], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = res.fileName || res.filename || ('REKONSILIASI_KESELURUHAN_' + tahun + '.xls');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 2500);
+            closeRekonsiliasiBpkModal();
+            showToast('Berhasil mengunduh Paket Rekonsiliasi (' + (res.count || 0) + ' transaksi).', 'success');
+        }, function (ex) {
+            btn.disabled = false;
+            loading.classList.add('hidden');
+            showToast('Terjadi kesalahan jaringan: ' + (ex && ex.message ? ex.message : String(ex)), 'error');
+        });
+    }
+
+    function exportAdminExcelClean() {
+        var items = null;
+        if (Array.isArray(adminTxFiltered) && adminTxFiltered.length > 0) {
+            items = adminTxFiltered;
+        } else if (Array.isArray(adminTxAllData) && adminTxAllData.length > 0) {
+            items = adminTxAllData;
+        }
+
+        if (items && items.length > 0) {
+            generateAndDownloadAdminExcelFile(items);
+            return;
+        }
+
+        if (!sessionData || sessionData.role !== 'ADMIN') {
+            showToast('Sesi admin tidak valid. Silakan masuk kembali.', 'warning');
+            return;
+        }
+
+        showAdminTxFilterToast('⏳ Menyiapkan berkas Excel transaksi...');
+        var filters = getAdminTransactionFilters();
+
+        callGasServer_('getAdminTransactions', [String(sessionData.sessionToken), 1, 99999, filters], function (res) {
+            if (!res || res.status !== 'success' || !res.items || !res.items.length) {
+                showToast('Tidak ada transaksi yang dapat diekspor sesuai filter.', 'warning');
+                return;
+            }
+            generateAndDownloadAdminExcelFile(res.items);
+        }, function (err) {
+            showToast('Gagal mengambil data transaksi dari server: ' + (err && err.message ? err.message : String(err)), 'error');
+        });
+    }
+
+    /** Membuat dan mengunduh file Excel (.xls) terfilter Admin dengan tag komentar XML yang valid */
+    function generateAndDownloadAdminExcelFile(items) {
+        var dateStr = new Date().toISOString().slice(0, 10);
+        var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
+            '<head><meta charset="utf-8">' +
+            '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Rekap Pajak Terfilter</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+            '<style>' +
+            'table{border-collapse:collapse;font-family:Calibri,sans-serif;font-size:11pt;}' +
+            'th{background-color:#047857;color:#ffffff;font-weight:bold;text-align:center;border:1px solid #065f46;padding:8px;}' +
+            'td{border:1px solid #cbd5e1;padding:6px;vertical-align:middle;}' +
+            '.text-col{mso-number-format:"\\@";}' +
+            '.num-col{mso-number-format:"\\#\\,\\#\\#0";text-align:right;}' +
+            '</style></head><body>' +
+            '<h2>REKAPITULASI PAJAK TERFILTER - SAJAK DINAS PENDIDIKAN PROVSU</h2>' +
+            '<p><strong>Jumlah Transaksi:</strong> ' + items.length + ' baris | <strong>Tanggal Ekspor:</strong> ' + dateStr + '</p>' +
+            '<table border="1"><thead><tr>' +
+            '<th>No</th><th>NPSN/Kode</th><th>Nama Satuan Pendidikan / Unit Kerja</th><th>Sub Unit Coretax</th><th>Kab/Kota</th><th>Cabang Dinas</th><th>Tgl BPP</th><th>Uraian Kegiatan</th><th>Jenis Pengadaan</th><th>Nama Perusahaan</th><th>NPWP Rekanan</th><th>BPP Jenis Pajak</th><th>Rincian Pajak</th><th>Nilai Belanja (Rp)</th><th>Pajak Setor (Rp)</th><th>Tgl Billing</th><th>Kode Billing</th><th>No Faktur</th><th>No Bupot</th><th>Kode NTPN</th><th>Tgl Setor</th><th>Sumber Dana</th><th>No ARKAS/SP2D</th><th>Metode Pengadaan</th><th>Keterangan</th>' +
+            '</tr></thead><tbody>';
+
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            html += '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.npsn || '') + '</td>' +
+                '<td>' + escapeHtml(it.namaSekolah || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.subUnitCoretax || '') + '</td>' +
+                '<td>' + escapeHtml(it.kabKota || '') + '</td>' +
+                '<td>' + escapeHtml(it.cabangDinas || '') + '</td>' +
+                '<td>' + escapeHtml(it.bppTanggal || '') + '</td>' +
+                '<td>' + escapeHtml(it.uraianKegiatan || '') + '</td>' +
+                '<td>' + escapeHtml(it.jenisPengadaan || '') + '</td>' +
+                '<td>' + escapeHtml(it.namaPerusahaan || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.npwpPerusahaan || '') + '</td>' +
+                '<td>' + escapeHtml(it.bppJenisPajak || '') + '</td>' +
+                '<td>' + escapeHtml(it.jenisPajakRincian || '') + '</td>' +
+                '<td class="num-col">' + Number(it.nilaiBelanja || 0) + '</td>' +
+                '<td class="num-col">' + Number(it.nilaiPajakSetor || 0) + '</td>' +
+                '<td>' + escapeHtml(it.tanggalBilling || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.noBilling || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.noFaktur || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.noBupot || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.ntpn || '') + '</td>' +
+                '<td>' + escapeHtml(it.tanggalSetor || '') + '</td>' +
+                '<td>' + escapeHtml(it.sumberDana || '') + '</td>' +
+                '<td class="text-col">' + escapeHtml(it.noArkas || '') + '</td>' +
+                '<td>' + (it.isSiplah ? 'SIPLah / E-Katalog' : 'Non SIPLah') + '</td>' +
+                '<td>' + escapeHtml(it.ket || '') + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table></body></html>';
+
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'REKAP_TRANSAKSI_SAJAK_' + dateStr + '.xls';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2500);
+        showAdminTxFilterToast('✅ Berhasil mengunduh ' + items.length + ' transaksi!');
+    }
+
+    /* ===================== 4A: PEMISAHAN ARSIP TAHUN ANGGARAN ===================== */
+
+    function openArchiveModal() {
+        $('archive_confirmCheck').checked = false;
+        $('archiveLoading').classList.add('hidden');
+        loadArchiveSheetsList();
+        $('modalArchiveAdmin').classList.remove('hidden');
+    }
+
+    function closeArchiveModal() {
+        $('modalArchiveAdmin').classList.add('hidden');
+    }
+
+    function loadArchiveSheetsList() {
+        var box = $('archiveSheetsList');
+        box.innerHTML = '<span class="italic text-slate-400">Memeriksa database Google Sheets...</span>';
+
+        callGasServer_('getArchiveSheetsList', [String(sessionData.sessionToken)], function (res) {
+            var sheetsList = (res && (res.archiveSheets || res.items)) || [];
+            if (!res || res.status !== 'success' || !sheetsList.length) {
+                box.innerHTML = '<div class="text-slate-500 italic">Belum ada sheet arsip tahunan yang dibuat. Semua transaksi berada di sheet aktif GOOGLE FORM REKAP PAJAK.</div>';
+                return;
+            }
+            box.innerHTML = '';
+            sheetsList.forEach(function (sh) {
+                var d = document.createElement('div');
+                d.className = 'flex items-center justify-between py-1 border-b border-slate-100 last:border-0';
+                d.innerHTML = '<div><strong class="text-slate-800">📄 ' + escapeHtml(sh.sheetName || sh.name) + '</strong></div><div class="text-[11px] text-emerald-700 font-semibold">' + Number(sh.rowCount || 0) + ' transaksi tersimpan</div>';
+                box.appendChild(d);
+            });
+        }, function () {
+            box.innerHTML = '<span class="text-rose-600">Gagal memuat daftar sheet arsip.</span>';
+        });
+    }
+
+    function executeArchiveYear() {
+        var chk = $('archive_confirmCheck');
+        if (!chk || !chk.checked) {
+            showToast('Harap centang persetujuan pemisahan data arsip sebelum melanjutkan.', 'warning');
+            return;
+        }
+        var targetYear = String($('archive_targetYear').value || '');
+        var btn = $('btnExecuteArchive');
+        var loading = $('archiveLoading');
+        btn.disabled = true;
+        loading.classList.remove('hidden');
+
+        callGasServer_('archivePriorYearTransactions', [String(sessionData.sessionToken), targetYear], function (res) {
+            btn.disabled = false;
+            loading.classList.add('hidden');
+            if (!res) {
+                showToast('Respon server kosong saat memproses arsip.', 'error');
+                return;
+            }
+            if (res.status === 'info') {
+                showSimpleModal('Informasi Status Basis Data', res.message);
+                return;
+            }
+            if (res.status !== 'success') {
+                showToast('Gagal memproses arsip: ' + res.message, 'error');
+                return;
+            }
+            showSimpleModal(
+                'Pemisahan Arsip Berhasil!',
+                'Sebanyak ' + (res.archivedCount || 0) + ' transaksi tahun ' + targetYear + ' telah berhasil dipindahkan ke sheet: ' +
+                (res.archiveSheetName || res.sheetName || 'Arsip') + '. Sheet utama kini lebih ramping dan cepat!'
+            );
+            loadArchiveSheetsList();
+            invalidateAdminTxCache();
+            loadAdminOverview();
+        }, function (ex) {
+            btn.disabled = false;
+            loading.classList.add('hidden');
+            showToast('Terjadi kesalahan saat mengarsipkan data: ' + (ex && ex.message ? ex.message : String(ex)), 'error');
+        });
+    }
+
+    /* ===================== INISIALISASI AWAL HALAMAN ===================== */
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof initDigitCounters === 'function') initDigitCounters();
+        if (typeof initFormDraftAutoSave === 'function') initFormDraftAutoSave();
+    });
+</script>

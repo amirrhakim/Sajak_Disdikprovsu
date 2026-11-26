@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="auto" style="background:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+  </defs>
+  <!-- Browser Frame -->
+  <rect x="15" y="15" width="870" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)" />
+  <!-- Window Controls -->
+  <rect x="15" y="15" width="870" height="40" rx="12" fill="#f1f5f9" />
+  <circle cx="35" cy="35" r="5" fill="#ef4444" />
+  <circle cx="50" cy="35" r="5" fill="#f59e0b" />
+  <circle cx="65" cy="35" r="5" fill="#10b981" />
+  <rect x="90" y="25" width="650" height="20" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <text x="105" y="39" font-size="11" fill="#64748b">https://sajak.disdik.sumutprov.go.id/portal</text>
+  <rect x="780" y="25" width="85" height="20" rx="6" fill="#047857" />
+  <text x="822" y="39" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">SAJAK PROV</text>
+  
+  <!-- Content Body -->
+  <g transform="translate(15, 55)">
+    <!-- A4 Paper Representation -->
+    <rect x="65" y="10" width="740" height="410" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" filter="url(#shadow)" />
+    
+    <!-- Kop Disdik Sumut -->
+    <text x="435" y="38" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">PEMERINTAH PROVINSI SUMATERA UTARA</text>
+    <text x="435" y="54" font-size="14" font-weight="bold" fill="#047857" text-anchor="middle">DINAS PENDIDIKAN</text>
+    <text x="435" y="70" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">BUKU PEMBANTU PAJAK (BPP)</text>
+    <text x="435" y="84" font-size="10" fill="#475569" text-anchor="middle">PERIODE: BULAN FEBRUARI 2026</text>
+    <line x1="85" y1="92" x2="785" y2="92" stroke="#0f172a" stroke-width="2" />
+
+    <!-- Metadata Sub Unit Coretax -->
+    <text x="85" y="110" font-size="9" fill="#334155">Sub Unit Kerja: <strong>SMA NEGERI 1 MEDAN</strong></text>
+    <text x="85" y="123" font-size="9" fill="#334155">NPSN / NITKU: <strong>10204567 / 0012345678901000000000</strong></text>
+    <text x="500" y="110" font-size="9" fill="#334155">Cabang Dinas: <strong>Cabang Dinas Wilayah I</strong></text>
+    <text x="500" y="123" font-size="9" fill="#334155">Kab / Kota: <strong>Kota Medan</strong></text>
+
+    <!-- Table 13 Columns Preview -->
+    <rect x="85" y="135" width="700" height="20" fill="#e2e8f0" stroke="#64748b" stroke-width="0.5" />
+    <text x="95" y="148" font-size="8" font-weight="bold">NO</text>
+    <text x="120" y="148" font-size="8" font-weight="bold">TGL BPP</text>
+    <text x="175" y="148" font-size="8" font-weight="bold">URAIAN KEGIATAN</text>
+    <text x="290" y="148" font-size="8" font-weight="bold">REKANAN</text>
+    <text x="390" y="148" font-size="8" font-weight="bold">JENIS PAJAK</text>
+    <text x="470" y="148" font-size="8" font-weight="bold">BELANJA (RP)</text>
+    <text x="550" y="148" font-size="8" font-weight="bold">SETOR (RP)</text>
+    <text x="630" y="148" font-size="8" font-weight="bold">NO. BILLING</text>
+    <text x="710" y="148" font-size="8" font-weight="bold">NTPN</text>
+
+    <rect x="85" y="155" width="700" height="20" fill="#ffffff" stroke="#64748b" stroke-width="0.5" />
+    <text x="98" y="168" font-size="8">1</text>
+    <text x="115" y="168" font-size="8">10/02/2026</text>
+    <text x="175" y="168" font-size="8">Belanja ATK Kantor</text>
+    <text x="290" y="168" font-size="8">CV. SUMATERA UTARA MANDIRI</text>
+    <text x="390" y="168" font-size="8">PPN Dalam Negeri</text>
+    <text x="470" y="168" font-size="8">11.100.000</text>
+    <text x="550" y="168" font-size="8" font-weight="bold">1.100.000</text>
+    <text x="630" y="168" font-size="8">012345678901234</text>
+    <text x="710" y="168" font-size="8">12AB34CD56EF78GH</text>
+
+    <!-- Table Totals -->
+    <rect x="85" y="175" width="700" height="18" fill="#f1f5f9" stroke="#64748b" stroke-width="0.5" />
+    <text x="390" y="188" font-size="8" font-weight="bold">TOTAL JUMLAH BULAN INI:</text>
+    <text x="470" y="188" font-size="8" font-weight="bold">11.100.000</text>
+    <text x="550" y="188" font-size="8" font-weight="bold">1.100.000</text>
+
+    <!-- 2 Signatures Block -->
+    <text x="180" y="240" font-size="8" text-anchor="middle">Mengetahui,</text>
+    <text x="180" y="252" font-size="8" font-weight="bold" text-anchor="middle">Kepala SMA Negeri 1 Medan</text>
+    <text x="180" y="305" font-size="8" font-weight="bold" text-anchor="middle"><u>Drs. H. Mhd. Syahrul, M.Pd</u></text>
+    <text x="180" y="316" font-size="8" text-anchor="middle">NIK. 1271012304680002</text>
+
+    <text x="620" y="240" font-size="8" text-anchor="middle">Medan, 28 Februari 2026</text>
+    <text x="620" y="252" font-size="8" font-weight="bold" text-anchor="middle">Bendahara Sekolah</text>
+    <text x="620" y="305" font-size="8" font-weight="bold" text-anchor="middle"><u>Hj. Nuraini Siregar, S.E</u></text>
+    <text x="620" y="316" font-size="8" text-anchor="middle">NIK. 1271055508820004</text>
+  </g>
+</svg>

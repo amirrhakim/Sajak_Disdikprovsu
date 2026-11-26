@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="auto" style="background:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+  </defs>
+  <!-- Browser Frame -->
+  <rect x="15" y="15" width="870" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)" />
+  <!-- Window Controls -->
+  <rect x="15" y="15" width="870" height="40" rx="12" fill="#f1f5f9" />
+  <circle cx="35" cy="35" r="5" fill="#ef4444" />
+  <circle cx="50" cy="35" r="5" fill="#f59e0b" />
+  <circle cx="65" cy="35" r="5" fill="#10b981" />
+  <rect x="90" y="25" width="650" height="20" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <text x="105" y="39" font-size="11" fill="#64748b">https://sajak.disdik.sumutprov.go.id/portal</text>
+  <rect x="780" y="25" width="85" height="20" rx="6" fill="#047857" />
+  <text x="822" y="39" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">SAJAK PROV</text>
+  
+  <!-- Content Body -->
+  <g transform="translate(15, 55)">
+    <!-- Top Nav -->
+    <rect x="0" y="0" width="870" height="50" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+    <text x="25" y="30" font-size="14" font-weight="bold" fill="#047857">SAJAK SUMUT</text>
+    <rect x="140" y="10" width="90" height="30" rx="6" fill="#ecfdf5" />
+    <text x="185" y="29" font-size="11" font-weight="bold" fill="#047857" text-anchor="middle">Profil Satuan</text>
+    <text x="285" y="29" font-size="11" fill="#64748b" text-anchor="middle">Input Pajak</text>
+    <text x="390" y="29" font-size="11" fill="#64748b" text-anchor="middle">Riwayat Pajak</text>
+    <rect x="750" y="12" width="95" height="26" rx="6" fill="#f1f5f9" />
+    <text x="797" y="29" font-size="10" font-weight="bold" fill="#334155" text-anchor="middle">10204567 ▾</text>
+
+    <!-- Header Banner -->
+    <rect x="25" y="65" width="820" height="70" rx="8" fill="#047857" />
+    <text x="45" y="93" font-size="16" font-weight="bold" fill="#ffffff">SMA NEGERI 1 MEDAN</text>
+    <text x="45" y="113" font-size="11" fill="#a7f3d0">NPSN: 10204567 • Cabang Dinas Wilayah I • Kota Medan • Terverifikasi Coretax ✓</text>
+    <rect x="720" y="80" width="105" height="30" rx="6" fill="#ffffff" />
+    <text x="772" y="100" font-size="11" font-weight="bold" fill="#047857" text-anchor="middle">✏️ Edit Profil</text>
+
+    <!-- Sub Unit Card -->
+    <rect x="25" y="150" width="820" height="110" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <text x="45" y="175" font-size="12" font-weight="bold" fill="#0f172a">IDENTITAS SUB UNIT CORETAX</text>
+    <line x1="45" y1="185" x2="825" y2="185" stroke="#f1f5f9" stroke-width="1" />
+    
+    <text x="45" y="208" font-size="11" fill="#64748b">NITKU Coretax (22 Digit):</text>
+    <text x="210" y="208" font-size="11" font-weight="bold" fill="#0f172a">0012345678901000000000</text>
+    
+    <text x="45" y="235" font-size="11" fill="#64748b">Alamat Lembaga:</text>
+    <text x="210" y="235" font-size="11" font-weight="bold" fill="#0f172a">Jl. Teuku Cik Ditiro No. 1, Kec. Medan Polonia</text>
+
+    <text x="480" y="208" font-size="11" fill="#64748b">Tipe Sekolah:</text>
+    <text x="590" y="208" font-size="11" font-weight="bold" fill="#047857">SMA Negeri</text>
+
+    <!-- 2 Pejabat Sekolah -->
+    <rect x="25" y="275" width="400" height="145" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <rect x="25" y="275" width="400" height="30" rx="8" fill="#f8fafc" />
+    <text x="45" y="295" font-size="11" font-weight="bold" fill="#047857">KEPALA SEKOLAH (PEJABAT 1)</text>
+    <text x="45" y="330" font-size="11" fill="#64748b">Nama Lengkap:</text>
+    <text x="45" y="348" font-size="12" font-weight="bold" fill="#0f172a">Drs. H. Mhd. Syahrul, M.Pd</text>
+    <text x="45" y="375" font-size="11" fill="#64748b">NIK (16 Digit):</text>
+    <text x="45" y="393" font-size="12" font-weight="bold" fill="#0f172a">1271012304680002</text>
+
+    <rect x="445" y="275" width="400" height="145" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <rect x="445" y="275" width="400" height="30" rx="8" fill="#f8fafc" />
+    <text x="465" y="295" font-size="11" font-weight="bold" fill="#047857">BENDAHARA SEKOLAH (PEJABAT 2)</text>
+    <text x="465" y="330" font-size="11" fill="#64748b">Nama Lengkap:</text>
+    <text x="465" y="348" font-size="12" font-weight="bold" fill="#0f172a">Hj. Nuraini Siregar, S.E</text>
+    <text x="465" y="375" font-size="11" fill="#64748b">NIK (16 Digit):</text>
+    <text x="465" y="393" font-size="12" font-weight="bold" fill="#0f172a">1271055508820004</text>
+  </g>
+</svg>

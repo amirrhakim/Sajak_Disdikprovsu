@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="auto" style="background:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+  </defs>
+  <!-- Browser Frame -->
+  <rect x="15" y="15" width="870" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)" />
+  <!-- Window Controls -->
+  <rect x="15" y="15" width="870" height="40" rx="12" fill="#f1f5f9" />
+  <circle cx="35" cy="35" r="5" fill="#ef4444" />
+  <circle cx="50" cy="35" r="5" fill="#f59e0b" />
+  <circle cx="65" cy="35" r="5" fill="#10b981" />
+  <rect x="90" y="25" width="650" height="20" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <text x="105" y="39" font-size="11" fill="#64748b">https://sajak.disdik.sumutprov.go.id/portal</text>
+  <rect x="780" y="25" width="85" height="20" rx="6" fill="#047857" />
+  <text x="822" y="39" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">SAJAK PROV</text>
+  
+  <!-- Content Body -->
+  <g transform="translate(15, 55)">
+    <!-- Breadcrumb / Header -->
+    <rect x="25" y="10" width="820" height="40" rx="8" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1" />
+    <text x="45" y="35" font-size="13" font-weight="bold" fill="#047857">📝 FORMULIR INPUT TRANSAKSI PAJAK &amp; BELANJA PENGADAAN</text>
+
+    <!-- Bagian A: Identitas Terkunci -->
+    <rect x="25" y="60" width="820" height="95" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <rect x="25" y="60" width="820" height="26" rx="8" fill="#f8fafc" />
+    <text x="40" y="78" font-size="11" font-weight="bold" fill="#334155">BAGIAN A: IDENTITAS LEMBAGA (TERKUNCI DARI PROFIL)</text>
+    
+    <text x="40" y="105" font-size="10" fill="#64748b">NPSN / KODE UNIT</text>
+    <rect x="40" y="112" width="180" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+    <text x="50" y="129" font-size="10" font-weight="bold" fill="#475569">10204567 🔒</text>
+
+    <text x="240" y="105" font-size="10" fill="#64748b">NAMA SATUAN PENDIDIKAN</text>
+    <rect x="240" y="112" width="280" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+    <text x="250" y="129" font-size="10" font-weight="bold" fill="#475569">SMA NEGERI 1 MEDAN 🔒</text>
+
+    <text x="540" y="105" font-size="10" fill="#64748b">NO. SUB UNIT CORETAX (NITKU)</text>
+    <rect x="540" y="112" width="280" height="26" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+    <text x="550" y="129" font-size="10" font-weight="bold" fill="#475569">0012345678901000000000 🔒</text>
+
+    <!-- Bagian B: Buku Rekanan Pintar -->
+    <rect x="25" y="165" width="820" height="240" rx="8" fill="#ffffff" stroke="#10b981" stroke-width="1.5" />
+    <rect x="25" y="165" width="820" height="28" rx="8" fill="#ecfdf5" />
+    <text x="40" y="184" font-size="11" font-weight="bold" fill="#047857">BAGIAN B: BUKU REKANAN PINTAR (IDE 3 - AUTOCOMPLETE)</text>
+
+    <text x="40" y="215" font-size="10" font-weight="bold" fill="#334155">NAMA PERUSAHAAN / PENYEDIA REKANAN *</text>
+    <rect x="40" y="222" width="820" height="32" rx="6" fill="#ffffff" stroke="#047857" stroke-width="1.5" />
+    <text x="50" y="243" font-size="12" font-weight="bold" fill="#0f172a">CV. SUMATERA UTARA MANDIRI</text>
+    <rect x="730" y="228" width="90" height="20" rx="4" fill="#10b981" />
+    <text x="775" y="242" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">✓ Terdaftar</text>
+
+    <!-- Dropdown Hint -->
+    <rect x="40" y="258" width="400" height="45" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)" />
+    <rect x="40" y="258" width="400" height="22" fill="#f8fafc" />
+    <text x="50" y="273" font-size="10" font-weight="bold" fill="#047857">💡 Rekomendasi Buku Rekanan (Auto-Fill):</text>
+    <text x="50" y="293" font-size="10" fill="#334155">CV. SUMATERA UTARA MANDIRI (NPWP: 01.234.567.8-123.000)</text>
+
+    <!-- Auto-filled Fields -->
+    <text x="40" y="325" font-size="10" font-weight="bold" fill="#334155">ALAMAT LENGKAP PERUSAHAAN REKANAN</text>
+    <rect x="40" y="332" width="460" height="32" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1" />
+    <text x="50" y="352" font-size="11" fill="#0f172a">Jl. Gatot Subroto No. 88, Medan Petisah (Otomatis Terisi)</text>
+
+    <text x="520" y="325" font-size="10" font-weight="bold" fill="#334155">NPWP REKANAN (15/16 DIGIT)</text>
+    <rect x="520" y="332" width="300" height="32" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1" />
+    <text x="530" y="352" font-size="11" font-weight="bold" fill="#047857">012345678123000 (15 Digit ✓)</text>
+
+    <text x="40" y="385" font-size="10" fill="#64748b">Alamat dan NPWP otomatis ditarik dari master rekanan atau riwayat belanja sebelumnya tanpa perlu ketik ulang.</text>
+  </g>
+</svg>

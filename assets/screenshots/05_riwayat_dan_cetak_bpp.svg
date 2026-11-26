@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="auto" style="background:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+  </defs>
+  <!-- Browser Frame -->
+  <rect x="15" y="15" width="870" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)" />
+  <!-- Window Controls -->
+  <rect x="15" y="15" width="870" height="40" rx="12" fill="#f1f5f9" />
+  <circle cx="35" cy="35" r="5" fill="#ef4444" />
+  <circle cx="50" cy="35" r="5" fill="#f59e0b" />
+  <circle cx="65" cy="35" r="5" fill="#10b981" />
+  <rect x="90" y="25" width="650" height="20" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <text x="105" y="39" font-size="11" fill="#64748b">https://sajak.disdik.sumutprov.go.id/portal</text>
+  <rect x="780" y="25" width="85" height="20" rx="6" fill="#047857" />
+  <text x="822" y="39" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">SAJAK PROV</text>
+  
+  <!-- Content Body -->
+  <g transform="translate(15, 55)">
+    <!-- Filter Bar -->
+    <rect x="25" y="10" width="820" height="55" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <text x="40" y="42" font-size="13" font-weight="bold" fill="#0f172a">Riwayat Transaksi Pajak</text>
+    
+    <text x="270" y="42" font-size="11" fill="#64748b">Bulan:</text>
+    <rect x="310" y="24" width="105" height="28" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <text x="320" y="42" font-size="11" fill="#0f172a">Februari ▾</text>
+
+    <text x="430" y="42" font-size="11" fill="#64748b">Tahun:</text>
+    <rect x="475" y="24" width="80" height="28" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+    <text x="490" y="42" font-size="11" fill="#0f172a">2026 ▾</text>
+
+    <rect x="565" y="24" width="70" height="28" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
+    <text x="600" y="42" font-size="11" fill="#475569" text-anchor="middle">Refresh</text>
+
+    <!-- Tombol Cetak BPP Bulanan -->
+    <rect x="645" y="24" width="185" height="28" rx="6" fill="#047857" />
+    <text x="737" y="42" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">🖨️ Cetak BPP Bulanan (PDF)</text>
+
+    <!-- Table Header -->
+    <rect x="25" y="75" width="820" height="30" fill="#047857" />
+    <text x="35" y="95" font-size="10" font-weight="bold" fill="#ffffff">TGL BPP</text>
+    <text x="105" y="95" font-size="10" font-weight="bold" fill="#ffffff">URAIAN / REKANAN</text>
+    <text x="310" y="95" font-size="10" font-weight="bold" fill="#ffffff">JENIS PAJAK</text>
+    <text x="430" y="95" font-size="10" font-weight="bold" fill="#ffffff">NILAI BELANJA</text>
+    <text x="525" y="95" font-size="10" font-weight="bold" fill="#ffffff">PAJAK SETOR</text>
+    <text x="625" y="95" font-size="10" font-weight="bold" fill="#ffffff">STATUS NTPN</text>
+    <text x="735" y="95" font-size="10" font-weight="bold" fill="#ffffff">AKSI</text>
+
+    <!-- Row 1 (Lengkap NTPN) -->
+    <rect x="25" y="105" width="820" height="50" fill="#ffffff" stroke="#f1f5f9" stroke-width="1" />
+    <text x="35" y="128" font-size="10" fill="#0f172a">10/02/2026</text>
+    <text x="105" y="123" font-size="10" font-weight="bold" fill="#0f172a">Belanja ATK Kantor Sekolah</text>
+    <text x="105" y="141" font-size="9" fill="#64748b">CV. SUMATERA UTARA MANDIRI</text>
+    <text x="310" y="128" font-size="10" fill="#0f172a">PPN</text>
+    <text x="430" y="128" font-size="10" fill="#0f172a">Rp 11.100.000</text>
+    <text x="525" y="128" font-size="10" font-weight="bold" fill="#047857">Rp 1.100.000</text>
+    <rect x="625" y="118" width="75" height="20" rx="4" fill="#ecfdf5" />
+    <text x="662" y="132" font-size="9" font-weight="bold" fill="#047857" text-anchor="middle">✓ Lunas NTPN</text>
+    
+    <!-- Action Buttons Row 1 -->
+    <rect x="715" y="118" width="55" height="20" rx="4" fill="#e0f2fe" />
+    <text x="742" y="132" font-size="9" font-weight="bold" fill="#0284c7" text-anchor="middle">🔗 Bukti</text>
+    <rect x="775" y="118" width="60" height="20" rx="4" fill="#f1f5f9" />
+    <text x="805" y="132" font-size="9" fill="#475569" text-anchor="middle">Struk</text>
+
+    <!-- Row 2 (Belum NTPN) -->
+    <rect x="25" y="155" width="820" height="50" fill="#f8fafc" stroke="#f1f5f9" stroke-width="1" />
+    <text x="35" y="178" font-size="10" fill="#0f172a">14/02/2026</text>
+    <text x="105" y="173" font-size="10" font-weight="bold" fill="#0f172a">Pengadaan Buku Perpustakaan</text>
+    <text x="105" y="191" font-size="9" fill="#64748b">PT. PUSTAKA MEDAN JAYA</text>
+    <text x="310" y="178" font-size="10" fill="#0f172a">PPh Pasal 22</text>
+    <text x="430" y="178" font-size="10" fill="#0f172a">Rp 20.000.000</text>
+    <text x="525" y="178" font-size="10" font-weight="bold" fill="#047857">Rp 300.000</text>
+    <rect x="625" y="168" width="75" height="20" rx="4" fill="#fef2f2" />
+    <text x="662" y="182" font-size="9" font-weight="bold" fill="#dc2626" text-anchor="middle">Belum NTPN</text>
+    
+    <!-- Action Buttons Row 2 -->
+    <rect x="715" y="168" width="70" height="20" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" />
+    <text x="750" y="182" font-size="9" font-weight="bold" fill="#b45309" text-anchor="middle">✏️ Edit/NTPN</text>
+
+    <!-- Summary Box -->
+    <rect x="25" y="220" width="820" height="50" rx="8" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1" />
+    <text x="45" y="242" font-size="11" font-weight="bold" fill="#047857">REKAPITULASI BULAN INI:</text>
+    <text x="45" y="258" font-size="11" fill="#334155">2 Transaksi • Total Belanja: Rp 31.100.000 • Total Pajak Setor: Rp 1.400.000 • 1 Menunggu NTPN</text>
+  </g>
+</svg>

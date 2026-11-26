@@ -1,0 +1,91 @@
+<!-- Komponen Header Brand & Logo Resmi Layar Login SAJAK -->
+<div class="flex items-center justify-between gap-3 sm:gap-4 pb-5 border-b border-slate-100/80">
+    <!-- Logo Resmi Pemerintah Provinsi Sumatera Utara (Kiri) -->
+    <div class="shrink-0 flex items-center justify-center w-14 sm:w-16">
+        <img id="logoPemprovSumut"
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Coat_of_arms_of_North_Sumatra.svg/250px-Coat_of_arms_of_North_Sumatra.svg.png"
+            data-fallback-src="https://upload.wikimedia.org/wikipedia/commons/c/c8/Coat_of_arms_of_North_Sumatra.svg"
+            alt="Lambang Pemerintah Provinsi Sumatera Utara" title="Pemerintah Provinsi Sumatera Utara"
+            referrerpolicy="no-referrer" loading="eager" onerror="handleLoginLogoFallback_(this, 'logoPemprovFallback')"
+            class="h-12 sm:h-14 w-auto object-contain select-none drop-shadow-xs transition-transform duration-200 hover:scale-105">
+        <!-- Fallback vektor otomatis jika koneksi ke sumber gambar terhambat -->
+        <svg id="logoPemprovFallback" viewBox="0 0 64 72"
+            class="hidden h-12 sm:h-14 w-auto select-none drop-shadow-xs transition-transform duration-200 hover:scale-105"
+            role="img" aria-label="Lambang Provinsi Sumatera Utara">
+            <defs>
+                <linearGradient id="sumutShieldFallback" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#059669" />
+                    <stop offset="100%" stop-color="#064e3b" />
+                </linearGradient>
+            </defs>
+            <path d="M32 3 L58 13 V36 C58 53 46 64 32 69 C18 64 6 53 6 36 V13 Z" fill="url(#sumutShieldFallback)"
+                stroke="#f59e0b" stroke-width="3" />
+            <polygon
+                points="32,12 34.8,20.2 43.5,20.2 36.4,25.2 39.1,33.4 32,28.4 24.9,33.4 27.6,25.2 20.5,20.2 29.2,20.2"
+                fill="#fbbf24" />
+            <text x="32" y="56" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="800"
+                font-family="Inter, sans-serif">SUMUT</text>
+        </svg>
+    </div>
+
+    <!-- Judul & Subjudul Tengah: SAJAK (Format Resmi Disdik Provsu) -->
+    <div class="flex-1 text-center min-w-0 px-2">
+        <h1 class="text-3xl sm:text-4xl font-black text-[#15297c] tracking-[0.16em] leading-none font-sans select-none">
+            SAJAK
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 tracking-wide leading-tight">
+            Sistem Rekapitulasi Pajak
+        </p>
+    </div>
+
+    <!-- Logo Resmi Dinas Pendidikan Provinsi Sumatera Utara (Kanan) -->
+    <div class="shrink-0 flex items-center justify-center w-14 sm:w-16">
+        <img id="logoDisdikSumut" src="https://drive.google.com/thumbnail?id=160EuvOi9Oqr2n7cRck3KuumPRSqtN95m&sz=w400"
+            data-fallback-src="https://lh3.googleusercontent.com/d/160EuvOi9Oqr2n7cRck3KuumPRSqtN95m=w400"
+            alt="Logo Dinas Pendidikan Provinsi Sumatera Utara" title="Dinas Pendidikan Provinsi Sumatera Utara"
+            referrerpolicy="no-referrer" loading="eager" onerror="handleLoginLogoFallback_(this, 'logoDisdikFallback')"
+            class="h-12 sm:h-14 w-auto object-contain select-none drop-shadow-xs transition-transform duration-200 hover:scale-105">
+        <!-- Fallback vektor otomatis jika koneksi ke sumber gambar terhambat -->
+        <svg id="logoDisdikFallback" viewBox="0 0 64 64"
+            class="hidden h-12 sm:h-14 w-auto select-none drop-shadow-xs transition-transform duration-200 hover:scale-105"
+            role="img" aria-label="Logo Dinas Pendidikan Sumatera Utara">
+            <defs>
+                <linearGradient id="disdikBadgeFallback" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#1d4ed8" />
+                    <stop offset="100%" stop-color="#1e3a8a" />
+                </linearGradient>
+            </defs>
+            <circle cx="32" cy="32" r="29" fill="url(#disdikBadgeFallback)" stroke="#93c5fd" stroke-width="2.5" />
+            <path d="M16 25 L32 17 L48 25 L32 33 Z" fill="#ffffff" />
+            <path d="M22 29 V40 C22 43 26.5 46 32 46 C37.5 46 42 43 42 40 V29" fill="none" stroke="#fde047"
+                stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            <text x="32" y="55" text-anchor="middle" fill="#e0f2fe" font-size="6.8" font-weight="800"
+                font-family="Inter, sans-serif">DISDIK</text>
+        </svg>
+    </div>
+</div>
+
+<!-- Konfigurasi Sumber Logo Terpusat (Dipakai di Layar Login & Kop Cetak PDF) + Fallback Bertingkat -->
+<script>
+    window.SAJAK_LOGOS = {
+        pemprov: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Coat_of_arms_of_North_Sumatra.svg/250px-Coat_of_arms_of_North_Sumatra.svg.png',
+        pemprovFallback: 'https://upload.wikimedia.org/wikipedia/commons/c/c8/Coat_of_arms_of_North_Sumatra.svg',
+        disdik: 'https://drive.google.com/thumbnail?id=160EuvOi9Oqr2n7cRck3KuumPRSqtN95m&sz=w400',
+        disdikFallback: 'https://lh3.googleusercontent.com/d/160EuvOi9Oqr2n7cRck3KuumPRSqtN95m=w400'
+    };
+
+    function handleLoginLogoFallback_(imgEl, fallbackSvgId) {
+        if (!imgEl) return;
+        var stage = imgEl.getAttribute('data-fb-stage') || '0';
+        var secondarySrc = imgEl.getAttribute('data-fallback-src');
+        if (stage === '0' && secondarySrc) {
+            imgEl.setAttribute('data-fb-stage', '1');
+            imgEl.src = secondarySrc;
+            return;
+        }
+        imgEl.onerror = null;
+        imgEl.classList.add('hidden');
+        var svgEl = document.getElementById(fallbackSvgId);
+        if (svgEl) svgEl.classList.remove('hidden');
+    }
+</script>
