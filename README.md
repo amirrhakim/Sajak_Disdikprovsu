@@ -1,6 +1,31 @@
+<div align="center">
+
+# 🏛️ SAJAK — Sistem Rekapitulasi Pajak & BPP
+### Dinas Pendidikan Provinsi Sumatera Utara
+
+[![Platform](https://img.shields.io/badge/Platform-Google%20Apps%20Script-047857?style=for-the-badge&logo=google&logoColor=white)](https://script.google.com)
+[![Coretax](https://img.shields.io/badge/Integrasi-Coretax%20DJP-1e3a8a?style=for-the-badge)](https://www.pajak.go.id)
+[![Tahun Anggaran](https://img.shields.io/badge/Tahun%20Anggaran-2026-0f172a?style=for-the-badge)](#)
+
+**Solusi digital satu pintu untuk pencatatan pajak belanja daerah, otomatisasi Buku Pembantu Pajak (BPP), dan pengawasan kepatuhan fiskal satuan pendidikan se-Sumatera Utara.**
+
+</div>
+
+---
+
+### ✨ Mengapa SAJAK Hadir?
+Mengelola pajak belanja sekolah dan unit dinas tidak lagi perlu rumus Excel manual yang rawan selisih atau berkas bukti yang tercecer. **SAJAK** menyederhanakan seluruh siklus perpajakan bendahara — mulai dari input transaksi hingga siap audit BPK/Inspektorat — dalam satu portal web yang ringan, cepat, dan ramah pengguna awam.
+
+### 🚀 Keunggulan Utama
+- ⚡ **Kalkulator Pajak Otomatis:** Hitung **PPN**, **PPh Pasal 21, 22, 23, dan 4(2)** dalam satu klik sesuai aturan terbaru (termasuk pembebasan PPh 22 dana BOSP & ambang batas Rp 2 juta).
+- 🛍️ **Jalur Cerdas SIPLah & E-Katalog:** Sesuai PMK 58/2022, transaksi marketplace cukup mencatat Nomor Invoice tanpa repot Kode Billing maupun NTPN.
+- 📥 **Impor BKU ARKAS 4 Hitungan Detik:** Unggah ekspor Excel BKU ARKAS 4 dan biarkan sistem menyaring transaksi belanja secara otomatis.
+- 🖨️ **Cetak BPP Bulanan A4 Landscape:** Lembar Buku Pembantu Pajak resmi lengkap dengan blok tanda tangan pejabat siap cetak untuk SPJ.
+- 🎯 **Radar Kepatuhan & Smart Filter 14 Cabdis:** Pengawasan real-time untuk **14 Cabang Dinas (Wilayah I–XIV)** dilengkapi *Smart Cascading Filter* Kabupaten/Kota dan ekspor **Paket Rekonsiliasi BPK (.xls)**.
+
+---
+
 # 📘 BUKU PANDUAN PENGGUNAAN APLIKASI SAJAK
-## SISTEM REKAPITULASI PAJAK & BUKU PEMBANTU PAJAK (BPP)
-### DINAS PENDIDIKAN PROVINSI SUMATERA UTARA
 
 > **Edisi:** Panduan Praktis & Bergambar untuk Pengguna Awam  
 > **Tahun Anggaran:** 2026 (Terintegrasi Standar Coretax DJP)  
